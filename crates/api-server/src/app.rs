@@ -3,7 +3,8 @@ use std::sync::Arc;
 use axum::Router;
 use tokio::net::TcpListener;
 use tracing::info;
-use utoipa::OpenApi;
+use utoipa::openapi::security::{HttpAuthScheme, HttpBuilder, SecurityScheme};
+use utoipa::{Modify, OpenApi};
 use utoipa_scalar::{Scalar, Servable};
 
 use crate::config::Config;
@@ -16,23 +17,38 @@ use crate::services::character::CharacterService;
 use crate::services::hash::HashService;
 use crate::services::jwt::JwtService;
 
+struct SecurityAddon;
+
+impl Modify for SecurityAddon {
+    fn modify(&self, openapi: &mut utoipa::openapi::OpenApi) {
+         openapi.components
+            .as_mut()
+            .unwrap()
+            .add_security_scheme(
+                "bearer_auth",
+                SecurityScheme::Http(
+                    HttpBuilder::new()
+                        .scheme(HttpAuthScheme::Bearer)
+                        .bearer_format("JWT")
+                        .build(),
+                ),
+            );
+    }
+}
+
 #[derive(OpenApi)]
 #[openapi(
     paths(
         routes::account::register,
         routes::account::login,
         routes::character::create_character,
+        routes::character::list_characters,
     ),
     tags(
         (name = "Auth", description = "Authentication endpoints"),
         (name = "Character", description = "Character management"),
     ),
-    components(
-        schemas()
-    ),
-    security(
-        ("bearer_auth" = [])
-    ),
+    modifiers(&SecurityAddon),
     info(
         title = "Resona API"
     )
@@ -51,9 +67,9 @@ impl AppState {
         let hash_service = HashService::default();
         let jwt_service = JwtService::new(&config.jwt.secret, config.jwt.expiration_seconds);
         let account_repository = PgAccountRepository::new(db.clone());
-        let account_service = AccountService::new(account_repository, hash_service, jwt_service.clone());
-        let character_repository = PgCharacterRepository::new(db);
-        let character_service = CharacterService::new(character_repository);
+        let account_service = AccountService::new(account_repository.clone(), hash_service, jwt_service.clone());
+        let character_repository = PgCharacterRepository::new(db.clone());
+        let character_service = CharacterService::new(character_repository, account_repository);
 
         Self { account_service, character_service, jwt_service }
     }

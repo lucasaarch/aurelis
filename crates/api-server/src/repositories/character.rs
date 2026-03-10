@@ -41,4 +41,31 @@ impl PgCharacterRepository {
         })
         .await
     }
+
+    pub async fn count_by_account(&self, acc_id: uuid::Uuid) -> Result<i64, RepositoryError> {
+        self.run_blocking(move |conn| {
+            use diesel::dsl::count_star;
+            use crate::db::schema::characters::dsl::*;
+
+            characters
+                .filter(account_id.eq(acc_id))
+                .select(count_star())
+                .first::<i64>(conn)
+                .map_err(Into::into)
+        })
+        .await
+    }
+
+    pub async fn list_all_by_account(&self, acc_id: uuid::Uuid) -> Result<Vec<Character>, RepositoryError> {
+        self.run_blocking(move |conn| {
+            use crate::db::schema::characters::dsl::*;
+
+            characters
+                .filter(account_id.eq(acc_id))
+                .load::<CharacterModel>(conn)
+                .map(|rows| rows.into_iter().map(|r| r.into()).collect())
+                .map_err(Into::into)
+        })
+        .await
+    }
 }

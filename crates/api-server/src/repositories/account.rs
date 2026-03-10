@@ -8,7 +8,6 @@ use shared::models::account::Account;
 
 #[derive(Debug, Clone)]
 pub struct CreateAccountParams {
-    pub username: String,
     pub email: String,
     pub password_hash: String,
 }
@@ -27,19 +26,6 @@ impl Repository for PgAccountRepository {
 impl PgAccountRepository {
     pub fn new(db: Database) -> Self {
         Self { db }
-    }
-
-    pub async fn find_by_email(&self, email: &str) -> Result<Account, RepositoryError> {
-        let email = email.to_string();
-
-        self.run_blocking(move |conn| {
-            accounts::table
-                .filter(accounts::email.eq(email))
-                .first::<AccountModel>(conn)
-                .map(|ac| ac.into())
-                .map_err(Into::into)
-        })
-        .await
     }
 
     pub async fn find_by_email_with_hash(
@@ -61,12 +47,10 @@ impl PgAccountRepository {
         .await
     }
 
-    pub async fn find_by_username(&self, username: &str) -> Result<Account, RepositoryError> {
-        let username = username.to_string();
-
+    pub async fn find_by_id(&self, id: uuid::Uuid) -> Result<Account, RepositoryError> {
         self.run_blocking(move |conn| {
             accounts::table
-                .filter(accounts::username.eq(username))
+                .filter(accounts::id.eq(id))
                 .first::<AccountModel>(conn)
                 .map(|ac| ac.into())
                 .map_err(Into::into)
@@ -75,7 +59,7 @@ impl PgAccountRepository {
     }
 
     pub async fn create(&self, params: CreateAccountParams) -> Result<Account, RepositoryError> {
-        let account = AccountModel::new(params.username, params.email, params.password_hash);
+        let account = AccountModel::new(params.email, params.password_hash);
 
         self.run_blocking(move |conn| {
             diesel::insert_into(accounts::table)

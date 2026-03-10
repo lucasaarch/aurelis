@@ -6,7 +6,6 @@ use crate::services::hash::HashService;
 use crate::services::jwt::JwtService;
 
 pub struct RegisterParams {
-    pub username: String,
     pub email: String,
     pub password: String,
 }
@@ -17,7 +16,6 @@ pub struct LoginParams {
 }
 
 pub struct LoginResult {
-    pub account: Account,
     pub token: String,
 }
 
@@ -46,7 +44,6 @@ impl AccountService {
 
         self.repository
             .create(CreateAccountParams {
-                username: params.username,
                 email: params.email,
                 password_hash,
             })
@@ -69,6 +66,6 @@ impl AccountService {
 
         let token = self.jwt_service.sign(account.id)?;
 
-        Ok(LoginResult { account, token })
+        Ok(LoginResult { token })
     }
 }

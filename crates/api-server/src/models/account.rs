@@ -7,7 +7,6 @@ use uuid::Uuid;
 #[diesel(table_name = crate::db::schema::accounts)]
 pub struct AccountModel {
     pub id: Uuid,
-    pub username: String,
     pub email: String,
     pub password_hash: String,
     pub max_characters: i16,
@@ -34,11 +33,10 @@ pub struct AccountModel {
 }
 
 impl AccountModel {
-    pub fn new(username: String, email: String, password_hash: String) -> Self {
+    pub fn new(email: String, password_hash: String) -> Self {
         let now = Utc::now().naive_utc();
         Self {
             id: Uuid::new_v4(),
-            username,
             email,
             password_hash,
             max_characters: 3,
@@ -107,7 +105,6 @@ impl From<AccountModel> for Account {
     fn from(model: AccountModel) -> Self {
         Account {
             id: model.id,
-            username: model.username,
             email: model.email,
             max_characters: model.max_characters,
             shared_storage_enabled: model.shared_storage_enabled,

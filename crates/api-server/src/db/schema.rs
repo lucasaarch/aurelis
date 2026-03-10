@@ -37,8 +37,6 @@ pub mod sql_types {
 diesel::table! {
     accounts (id) {
         id -> Uuid,
-        #[max_length = 32]
-        username -> Varchar,
         #[max_length = 255]
         email -> Varchar,
         #[max_length = 255]

@@ -1,11 +1,10 @@
-use std::sync::{Arc, LazyLock};
+use std::sync::Arc;
 
 use axum::Json;
 use axum::Router;
 use axum::extract::State;
 use axum::http::StatusCode;
 use axum::routing::post;
-use regex::Regex;
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 use validator::{Validate, ValidationError};
@@ -14,9 +13,6 @@ use crate::app::AppState;
 use crate::error::ErrorResponse;
 use crate::routes::middlewares::ValidatedBody;
 use crate::services::account::{LoginParams, RegisterParams};
-
-static USERNAME_REGEX: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r"^[a-zA-Z0-9]([a-zA-Z0-9._]*[a-zA-Z0-9])?$").unwrap());
 
 fn validate_strong_password(password: &str) -> Result<(), ValidationError> {
     let checks = [
@@ -51,11 +47,6 @@ fn validate_strong_password(password: &str) -> Result<(), ValidationError> {
 
 #[derive(Deserialize, ToSchema, Validate)]
 pub struct RegisterRequest {
-    #[validate(
-        length(min = 3, max = 20, message = "must be between 3 and 20 characters"),
-        regex(path = *USERNAME_REGEX, message = "must start and end with a letter or digit, and only contain letters, digits, dots and underscores")
-    )]
-    pub username: String,
     #[validate(email(message = "must be a valid email address"))]
     pub email: String,
     #[validate(
@@ -90,7 +81,6 @@ pub async fn register(
     state
         .account_service
         .register(RegisterParams {
-            username: body.username,
             email: body.email,
             password: body.password,
         })
