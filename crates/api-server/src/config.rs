@@ -44,7 +44,10 @@ impl Config {
             jwt: JwtConfig {
                 secret: require_env_var("API_JWT_SECRET")?,
                 expiration_seconds: env_var("API_JWT_EXPIRATION_SECONDS", Some(86400))?,
-                refresh_expiration_seconds: env_var("API_JWT_REFRESH_EXPIRATION_SECONDS", Some(2592000))?,
+                refresh_expiration_seconds: env_var(
+                    "API_JWT_REFRESH_EXPIRATION_SECONDS",
+                    Some(2592000),
+                )?,
             },
         };
 
@@ -64,7 +67,9 @@ fn env_var<T: std::str::FromStr>(key: &str, default: Option<T>) -> Result<T, Con
         Ok(value) => value
             .parse::<T>()
             .map_err(|_| ConfigError::InvalidEnvVar(key.to_string(), value)),
-        Err(std::env::VarError::NotPresent) => default.ok_or_else(|| ConfigError::MissingEnvVar(key.to_string())),
+        Err(std::env::VarError::NotPresent) => {
+            default.ok_or_else(|| ConfigError::MissingEnvVar(key.to_string()))
+        }
         Err(e) => Err(ConfigError::InvalidEnvVar(key.to_string(), e.to_string())),
     }
 }

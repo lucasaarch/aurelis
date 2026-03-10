@@ -55,12 +55,12 @@ pub async fn run(config: Config) {
         .with_state(state);
 
     let addr = format!("0.0.0.0:{}", config.server.port);
-    let listener = TcpListener::bind(&addr).await.expect("Failed to bind address");
+    let listener = TcpListener::bind(&addr)
+        .await
+        .expect("Failed to bind address");
 
     info!("Server listening on {addr}");
     info!("API docs available at http://{addr}/docs");
 
-    axum::serve(listener, app)
-        .await
-        .expect("Server error");
+    axum::serve(listener, app).await.expect("Server error");
 }

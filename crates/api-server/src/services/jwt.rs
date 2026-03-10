@@ -8,6 +8,7 @@ use crate::error::AppError;
 pub struct Claims {
     pub sub: Uuid,
     pub exp: u64,
+    pub iat: u64,
 }
 
 #[derive(Clone)]
@@ -27,8 +28,14 @@ impl JwtService {
     }
 
     pub fn sign(&self, account_id: Uuid) -> Result<String, AppError> {
-        let exp = jsonwebtoken::get_current_timestamp() + self.expiration_seconds;
-        let claims = Claims { sub: account_id, exp };
+        let now = jsonwebtoken::get_current_timestamp();
+        let iat = now;
+        let exp = now + self.expiration_seconds;
+        let claims = Claims {
+            sub: account_id,
+            exp,
+            iat,
+        };
 
         encode(&Header::default(), &claims, &self.encoding_key)
             .map_err(|e| AppError::Internal(anyhow::anyhow!(e)))

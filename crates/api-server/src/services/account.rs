@@ -29,7 +29,11 @@ pub struct AccountService {
 }
 
 impl AccountService {
-    pub fn new(repository: PgAccountRepository, hash_service: HashService, jwt_service: JwtService) -> Self {
+    pub fn new(
+        repository: PgAccountRepository,
+        hash_service: HashService,
+        jwt_service: JwtService,
+    ) -> Self {
         Self {
             repository,
             hash_service,
@@ -57,9 +61,7 @@ impl AccountService {
             .await
             .map_err(|_| AppError::Unauthorized)?;
 
-        let valid = self
-            .hash_service
-            .verify(&params.password, &password_hash)?;
+        let valid = self.hash_service.verify(&params.password, &password_hash)?;
 
         if !valid {
             return Err(AppError::Unauthorized);

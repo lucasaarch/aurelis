@@ -1,4 +1,9 @@
-use axum::{Json, extract::{FromRequest, Query, Request}, http::StatusCode, response::{IntoResponse, Response}};
+use axum::{
+    Json,
+    extract::{FromRequest, Query, Request},
+    http::StatusCode,
+    response::{IntoResponse, Response},
+};
 use serde::de::DeserializeOwned;
 use validator::{Validate, ValidationErrors};
 
@@ -47,12 +52,11 @@ where
             .map_err(|err| err.into_response())?;
 
         if let Err(validation_errors) = value.validate() {
-           let error = ErrorResponse::new(
+            let error = ErrorResponse::new(
                 StatusCode::BAD_REQUEST,
                 "VALIDATION_FAILED",
                 format_validation_errors(&validation_errors),
             );
-
 
             return Err(error.into_response());
         }
@@ -61,7 +65,6 @@ where
     }
 }
 
-
 fn format_validation_errors(errors: &ValidationErrors) -> String {
     errors
         .field_errors()
@@ -69,12 +72,7 @@ fn format_validation_errors(errors: &ValidationErrors) -> String {
         .map(|(field, errs)| {
             let messages = errs
                 .iter()
-                .map(|e| {
-                    e.message
-                        .as_deref()
-                        .unwrap_or(e.code.as_ref())
-                        .to_string()
-                })
+                .map(|e| e.message.as_deref().unwrap_or(e.code.as_ref()).to_string())
                 .collect::<Vec<_>>()
                 .join(", ");
 

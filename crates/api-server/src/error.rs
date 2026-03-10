@@ -61,9 +61,7 @@ impl From<AppError> for ErrorResponse {
             AppError::NotFound => {
                 ErrorResponse::new(StatusCode::NOT_FOUND, "NOT_FOUND", "Not found")
             }
-            AppError::Conflict(msg) => {
-                ErrorResponse::new(StatusCode::CONFLICT, "CONFLICT", msg)
-            }
+            AppError::Conflict(msg) => ErrorResponse::new(StatusCode::CONFLICT, "CONFLICT", msg),
             AppError::Unauthorized => {
                 ErrorResponse::new(StatusCode::UNAUTHORIZED, "UNAUTHORIZED", "Unauthorized")
             }

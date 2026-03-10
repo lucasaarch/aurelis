@@ -1,10 +1,10 @@
 use std::sync::{Arc, LazyLock};
 
+use axum::Json;
+use axum::Router;
 use axum::extract::State;
 use axum::http::StatusCode;
 use axum::routing::post;
-use axum::Router;
-use axum::Json;
 use regex::Regex;
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
@@ -20,10 +20,22 @@ static USERNAME_REGEX: LazyLock<Regex> =
 
 fn validate_strong_password(password: &str) -> Result<(), ValidationError> {
     let checks = [
-        (password.chars().any(|c| c.is_uppercase()), "must contain at least one uppercase letter"),
-        (password.chars().any(|c| c.is_lowercase()), "must contain at least one lowercase letter"),
-        (password.chars().any(|c| c.is_ascii_digit()), "must contain at least one digit"),
-        (password.chars().any(|c| !c.is_alphanumeric()), "must contain at least one special character"),
+        (
+            password.chars().any(|c| c.is_uppercase()),
+            "must contain at least one uppercase letter",
+        ),
+        (
+            password.chars().any(|c| c.is_lowercase()),
+            "must contain at least one lowercase letter",
+        ),
+        (
+            password.chars().any(|c| c.is_ascii_digit()),
+            "must contain at least one digit",
+        ),
+        (
+            password.chars().any(|c| !c.is_alphanumeric()),
+            "must contain at least one special character",
+        ),
     ];
 
     for (valid, msg) in checks {
@@ -123,5 +135,7 @@ pub async fn login(
         })
         .await?;
 
-    Ok(Json(LoginResponse { token: result.token }))
+    Ok(Json(LoginResponse {
+        token: result.token,
+    }))
 }
