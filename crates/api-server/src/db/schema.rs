@@ -49,6 +49,7 @@ diesel::table! {
         is_admin -> Bool,
         god_mode -> Bool,
         email_verified -> Bool,
+        email_verified_at -> Nullable<Timestamptz>,
         #[max_length = 255]
         email_verify_token -> Nullable<Varchar>,
         email_verify_token_expires -> Nullable<Timestamptz>,

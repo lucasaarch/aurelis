@@ -13,6 +13,7 @@ CREATE TABLE
         is_admin BOOLEAN NOT NULL DEFAULT FALSE,
         god_mode BOOLEAN NOT NULL DEFAULT FALSE,
         email_verified BOOLEAN NOT NULL DEFAULT FALSE,
+        email_verified_at TIMESTAMPTZ,
         email_verify_token VARCHAR(255),
         email_verify_token_expires TIMESTAMPTZ,
         password_reset_token VARCHAR(255),

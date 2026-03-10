@@ -15,6 +15,7 @@ pub struct Account {
     pub is_admin: bool,
     pub god_mode: bool,
     pub email_verified: bool,
+    pub email_verified_at: Option<NaiveDateTime>,
     pub banned_at: Option<NaiveDateTime>,
     pub banned_reason: Option<String>,
     pub suspended_until: Option<NaiveDateTime>,
