@@ -4,21 +4,17 @@
     "type": "split",
     "children": [
       {
-        "id": "bda7b609768a9c43",
+        "id": "cc400b17b25fcd19",
         "type": "tabs",
         "children": [
           {
-            "id": "088766449defe07f",
+            "id": "8286d08666f77c51",
             "type": "leaf",
             "state": {
-              "type": "markdown",
-              "state": {
-                "file": "Aspectos/Halvir.md",
-                "mode": "preview",
-                "source": false
-              },
+              "type": "empty",
+              "state": {},
               "icon": "lucide-file",
-              "title": "Halvir"
+              "title": "Nova aba"
             }
           }
         ]
@@ -94,7 +90,6 @@
             "state": {
               "type": "backlink",
               "state": {
-                "file": "Aspectos/Halvir.md",
                 "collapseAll": false,
                 "extraContext": false,
                 "sortOrder": "alphabetical",
@@ -104,7 +99,7 @@
                 "unlinkedCollapsed": true
               },
               "icon": "links-coming-in",
-              "title": "Links inversos para Halvir"
+              "title": "Links inversos"
             }
           },
           {
@@ -113,12 +108,11 @@
             "state": {
               "type": "outgoing-link",
               "state": {
-                "file": "Aspectos/Halvir.md",
                 "linksCollapsed": false,
                 "unlinkedCollapsed": true
               },
               "icon": "links-going-out",
-              "title": "Links de saída para Halvir"
+              "title": "Links de saída"
             }
           },
           {
@@ -156,13 +150,12 @@
             "state": {
               "type": "outline",
               "state": {
-                "file": "Aspectos/Halvir.md",
                 "followCursor": false,
                 "showSearch": false,
                 "searchQuery": ""
               },
               "icon": "lucide-list",
-              "title": "Sumário de Halvir"
+              "title": "Sumário"
             }
           }
         ]
@@ -183,8 +176,11 @@
       "bases:Criar nova base": false
     }
   },
-  "active": "088766449defe07f",
+  "active": "8286d08666f77c51",
   "lastOpenFiles": [
+    "Episódios/Episódio 1 — Lightfall.md",
+    "Aspectos/Halvir.md",
+    "Episódios",
     "Aspectos/Gorvane.md",
     "Aspectos/Drakon.md",
     "Aspectos/Caelen.md",
@@ -196,7 +192,6 @@
     "Aspectos/Nyxara.md",
     "Aspectos/Mirevh.md",
     "Aspectos/Marei.md",
-    "Aspectos/Halvir.md",
     "Cidades/Chronovar.md",
     "Cidades/Aerindal.md",
     "Cidades/Morvaen.md",
@@ -213,7 +208,6 @@
     "Sem título.md",
     "Cidades",
     "mundo",
-    "Bem-vindo.md",
     "Aspectos"
   ]
 }
