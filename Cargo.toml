@@ -1,0 +1,2 @@
+[workspace]
+members = ["crates/client", "crates/api-server", "crates/city-service", "crates/dungeon-service", "crates/shared"]
