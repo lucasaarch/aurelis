@@ -40,6 +40,7 @@ where
     }
 }
 
+#[allow(dead_code)]
 pub struct ValidatedQuery<T>(pub T);
 
 impl<S, T> FromRequest<S> for ValidatedQuery<T>

@@ -1,3 +1,5 @@
+use bigdecimal::BigDecimal;
+use uuid::Uuid;
 use validator::ValidationError;
 
 pub fn validate_rarity(value: &str) -> Result<(), ValidationError> {
@@ -9,7 +11,10 @@ pub fn validate_rarity(value: &str) -> Result<(), ValidationError> {
 
 pub fn validate_equipment_slot(value: &str) -> Result<(), ValidationError> {
     match value {
-        "weapon" | "head" | "chest" | "legs" | "accessory" => Ok(()),
+        "weapon" | "head" | "chest" | "legs" | "gloves" | "shoes"
+        | "acc_ring_1" | "acc_ring_2" | "acc_necklace" | "acc_earrings"
+        | "acc_arm" | "acc_face_bottom" | "acc_face_middle" | "acc_face_top"
+        | "acc_bottom_piece" | "acc_top_piece" | "acc_weapon" | "acc_support_unit" => Ok(()),
         _ => Err(ValidationError::new("invalid_equipment_slot")),
     }
 }
@@ -33,5 +38,33 @@ pub fn validate_mob_type(value: &str) -> Result<(), ValidationError> {
     match value {
         "common" | "miniboss" | "boss" | "raidboss" => Ok(()),
         _ => Err(ValidationError::new("invalid_mob_type")),
+    }
+}
+
+pub fn validate_inventory_type(value: &str) -> Result<(), ValidationError> {
+    match value {
+        "equipment" | "accessory" | "consumable" | "material" | "quest_item" | "special" => Ok(()),
+        _ => Err(ValidationError::new("invalid_inventory_type")),
+    }
+}
+
+pub fn validate_drop_chance(value: &BigDecimal) -> Result<(), ValidationError> {
+    use bigdecimal::ToPrimitive;
+
+    if let Some(f) = value.to_f64() {
+        if f > 0.0 && f <= 100.0 {
+            return Ok(());
+        }
+    }
+
+    let mut err = ValidationError::new("drop_chance");
+    err.message = Some("must be > 0 and <= 100".into());
+    Err(err)
+}
+
+pub fn validate_uuid(value: &Uuid) -> Result<(), ValidationError> {
+    match uuid::Uuid::parse_str(&value.to_string()) {
+        Ok(_) => Ok(()),
+        Err(_) => Err(ValidationError::new("invalid_uuid")),
     }
 }

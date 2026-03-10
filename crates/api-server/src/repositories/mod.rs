@@ -7,6 +7,8 @@ pub mod account;
 pub mod character;
 pub mod mob;
 pub mod item;
+pub mod inventory;
+pub mod mob_drop_rate;
 
 #[derive(Debug, Error)]
 pub enum RepositoryError {

@@ -5,7 +5,7 @@ use diesel::serialize::{self, IsNull, Output, ToSql};
 use shared::models::inventory_type::InventoryType;
 use std::io::Write;
 
-#[derive(Debug, AsExpression, FromSqlRow)]
+#[derive(Debug, Clone, AsExpression, FromSqlRow)]
 #[diesel(sql_type = crate::db::schema::sql_types::InventoryType)]
 pub enum InventoryTypeModel {
     Equipment,
@@ -56,6 +56,7 @@ impl From<InventoryTypeModel> for InventoryType {
         }
     }
 }
+
 
 impl std::str::FromStr for InventoryTypeModel {
     type Err = ();

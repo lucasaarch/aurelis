@@ -2,8 +2,8 @@ use diesel::prelude::*;
 use shared::models::character::Character;
 
 use crate::{
-    db::{Database, schema::characters},
-    models::character::CharacterModel,
+    db::{Database, schema::{characters, inventory}},
+    models::{character::CharacterModel, inventory::InventoryModel},
     repositories::{Repository, RepositoryError},
 };
 
@@ -43,11 +43,29 @@ impl PgCharacterRepository {
         );
 
         self.run_blocking(move |conn| {
-            diesel::insert_into(characters::table)
-                .values(&model)
-                .get_result(conn)
-                .map(|c: CharacterModel| c.into())
-                .map_err(Into::into)
+            use crate::models::inventory_type::InventoryTypeModel::*;
+            
+            conn.transaction::<Character, RepositoryError, _>(|conn| {
+                let character: Character = diesel::insert_into(characters::table)
+                    .values(&model)
+                    .get_result(conn)
+                    .map(|c: CharacterModel| c.into())?;
+
+                let inventories: Vec<InventoryModel> = [
+                    Equipment, Accessory, Consumable, Material, QuestItem, Special,
+                ]
+                .iter()
+                .map(|t| InventoryModel::new(character.id, t.clone(), 56))
+                .collect();
+
+                diesel::insert_into(inventory::table)
+                    .values(&inventories)
+                    .execute(conn)
+                    .map(|_| ())?;
+
+                Ok(character)
+            })
+            .map_err(Into::into)
         })
         .await
     }

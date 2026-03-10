@@ -9,10 +9,8 @@ use crate::models::inventory_type::InventoryType;
 pub struct Inventory {
     pub id: Uuid,
     pub character_id: Uuid,
-    pub item_instance_id: Option<Uuid>,
-    pub item_id: Option<Uuid>,
     pub inventory_type: InventoryType,
-    pub slot_index: i16,
-    pub quantity: i16,
-    pub acquired_at: NaiveDateTime,
+    pub capacity: i16,
+    pub created_at: NaiveDateTime,
+    pub updated_at: NaiveDateTime,
 }

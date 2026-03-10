@@ -13,6 +13,7 @@ pub mod dungeon_mob;
 pub mod equipment;
 pub mod equipment_slot;
 pub mod inventory;
+pub mod inventory_item;
 pub mod inventory_type;
 pub mod item;
 pub mod item_instance;

@@ -5,16 +5,18 @@ use crate::{
 };
 use diesel::prelude::*;
 use shared::models::item::Item;
+use uuid::Uuid;
 
 pub struct CreateItemParams {
-    pub slug: String,
     pub name: String,
     pub class: Option<String>,
     pub description: Option<String>,
     pub rarity: String,
     pub equipment_slot: Option<String>,
-    pub level_req: i16,
-    pub stats: serde_json::Value,
+    pub level_req: Option<i16>,
+    pub stats: Option<serde_json::Value>,
+    pub slug: String,
+    pub inventory_type: String,
 }
 
 #[derive(Clone)]
@@ -42,12 +44,19 @@ impl PgItemRepository {
         let model = ItemModel::new(
             params.name.clone(),
             params.description,
-            params.rarity.parse().map_err(|_| RepositoryError::NotFound)?,
+            params
+                .rarity
+                .parse()
+                .map_err(|_| RepositoryError::NotFound)?,
             equipment_slot_model,
             class_model,
             params.level_req,
             params.stats,
             params.slug.clone(),
+            params
+                .inventory_type
+                .parse()
+                .map_err(|_| RepositoryError::NotFound)?,
         );
 
         self.run_blocking(move |conn| {
@@ -55,6 +64,18 @@ impl PgItemRepository {
                 .values(&model)
                 .get_result(conn)
                 .map(|m: ItemModel| m.into())
+                .map_err(Into::into)
+        })
+        .await
+    }
+
+    pub async fn find_by_id(&self, item_id: Uuid) -> Result<Item, RepositoryError> {
+        self.run_blocking(move |conn| {
+            use crate::db::schema::items::dsl::*;
+            items
+                .find(item_id)
+                .first::<ItemModel>(conn)
+                .map(|m| m.into())
                 .map_err(Into::into)
         })
         .await

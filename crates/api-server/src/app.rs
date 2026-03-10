@@ -16,14 +16,18 @@ use crate::proto::auth::auth_service_server::AuthServiceServer;
 use crate::repositories::account::PgAccountRepository;
 use crate::repositories::character::PgCharacterRepository;
 use crate::repositories::mob::PgMobRepository;
+use crate::repositories::mob_drop_rate::PgMobDropRateRepository;
 use crate::repositories::item::PgItemRepository;
+use crate::repositories::inventory::PgInventoryRepository;
 use crate::routes;
 use crate::services::account::AccountService;
 use crate::services::auth::AuthService;
 use crate::services::character::CharacterService;
 use crate::services::hash::HashService;
+use crate::services::inventory::InventoryService;
 use crate::services::jwt::JwtService;
 use crate::services::mob::MobService;
+use crate::services::mob_drop_rate::MobDropRateService;
 use crate::services::item::ItemService;
 
 struct SecurityAddon;
@@ -46,6 +50,8 @@ impl Modify for SecurityAddon {
 #[openapi(
     paths(
         routes::admin::mob::create_mob,
+        routes::admin::mob_drop_rate::create_mob_drop_rate,
+        routes::admin::give_item::give_item,
         routes::admin::item::create_item,
         routes::auth::register,
         routes::auth::login,
@@ -66,16 +72,23 @@ struct ApiDoc;
 
 #[derive(Clone)]
 pub struct AppState {
-    pub account_service: AccountService,
     pub auth_service: AuthService,
     pub character_service: CharacterService,
     pub mob_service: MobService,
+    pub mob_drop_rate_service: MobDropRateService,
     pub jwt_service: JwtService,
     pub item_service: ItemService,
 }
 
 impl AppState {
     fn new(db: Database, config: &Config) -> Self {
+        let account_repository = PgAccountRepository::new(db.clone());
+        let character_repository = PgCharacterRepository::new(db.clone());
+        let mob_repository = PgMobRepository::new(db.clone());
+        let item_repository = PgItemRepository::new(db.clone());
+        let inventory_repository = PgInventoryRepository::new(db.clone());
+
+
         let hash_service = HashService::default();
         let jwt_service = JwtService::new(
             &config.jwt.secret_web,
@@ -85,26 +98,28 @@ impl AppState {
             config.jwt.expiration_seconds,
             config.jwt.refresh_expiration_seconds,
         );
-        let account_repository = PgAccountRepository::new(db.clone());
+
+
         let account_service = AccountService::new(account_repository.clone());
         let auth_service = AuthService::new(
             account_repository.clone(),
             hash_service.clone(),
             jwt_service.clone(),
         );
-        let character_repository = PgCharacterRepository::new(db.clone());
         let character_service =
             CharacterService::new(character_repository, account_repository.clone());
-        let mob_repository = PgMobRepository::new(db.clone());
         let mob_service = MobService::new(mob_repository, account_repository.clone());
-        let item_repository = PgItemRepository::new(db.clone());
-        let item_service = ItemService::new(item_repository, account_repository.clone());
+        let mob_drop_rate_repository = PgMobDropRateRepository::new(db.clone());
+        let mob_drop_rate_service = MobDropRateService::new(mob_drop_rate_repository, account_repository.clone());
+        let inventory_service = InventoryService::new(inventory_repository.clone());
+        let item_service = ItemService::new(item_repository, account_service.clone(), inventory_service.clone());
+
 
         Self {
-            account_service,
             auth_service,
             character_service,
             mob_service,
+            mob_drop_rate_service,
             jwt_service,
             item_service,
         }

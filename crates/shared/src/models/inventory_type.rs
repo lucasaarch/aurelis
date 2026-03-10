@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-#[derive(Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum InventoryType {
     Equipment,
@@ -9,4 +9,18 @@ pub enum InventoryType {
     Material,
     QuestItem,
     Special,
+}
+
+impl From<InventoryType> for String {
+    fn from(inv_type: InventoryType) -> Self {
+        match inv_type {
+            InventoryType::Equipment => "equipment",
+            InventoryType::Accessory => "accessory",
+            InventoryType::Consumable => "consumable",
+            InventoryType::Material => "material",
+            InventoryType::QuestItem => "quest_item",
+            InventoryType::Special => "special",
+        }
+        .to_string()
+    }
 }
