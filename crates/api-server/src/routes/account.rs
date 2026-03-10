@@ -1,30 +1,64 @@
-use std::sync::Arc;
+use std::sync::{Arc, LazyLock};
 
-use axum::extract::{Json, State};
+use axum::extract::State;
 use axum::http::StatusCode;
 use axum::routing::post;
 use axum::Router;
+use regex::Regex;
 use serde::Deserialize;
 use utoipa::ToSchema;
+use validator::{Validate, ValidationError};
 
 use crate::app::AppState;
-use crate::error::{AppError, ErrorResponse};
+use crate::error::ErrorResponse;
+use crate::routes::middlewares::ValidatedBody;
 use crate::services::account::RegisterParams;
 
-#[derive(Deserialize, ToSchema)]
+static USERNAME_REGEX: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"^[a-zA-Z0-9]([a-zA-Z0-9._]*[a-zA-Z0-9])?$").unwrap());
+
+fn validate_strong_password(password: &str) -> Result<(), ValidationError> {
+    let checks = [
+        (password.chars().any(|c| c.is_uppercase()), "must contain at least one uppercase letter"),
+        (password.chars().any(|c| c.is_lowercase()), "must contain at least one lowercase letter"),
+        (password.chars().any(|c| c.is_ascii_digit()), "must contain at least one digit"),
+        (password.chars().any(|c| !c.is_alphanumeric()), "must contain at least one special character"),
+    ];
+
+    for (valid, msg) in checks {
+        if !valid {
+            let mut err = ValidationError::new("strong_password");
+            err.message = Some(msg.into());
+            return Err(err);
+        }
+    }
+
+    Ok(())
+}
+
+#[derive(Deserialize, ToSchema, Validate)]
 pub struct RegisterRequest {
+    #[validate(
+        length(min = 3, max = 20, message = "must be between 3 and 20 characters"),
+        regex(path = *USERNAME_REGEX, message = "must start and end with a letter or digit, and only contain letters, digits, dots and underscores")
+    )]
     pub username: String,
+    #[validate(email(message = "must be a valid email address"))]
     pub email: String,
+    #[validate(
+        length(min = 8, message = "must be at least 8 characters"),
+        custom(function = validate_strong_password)
+    )]
     pub password: String,
 }
 
 pub fn router() -> Router<Arc<AppState>> {
-    Router::new().route("/auth/register", post(register))
+    Router::new().route("/account/register", post(register))
 }
 
 #[utoipa::path(
     post,
-    path = "/auth/register",
+    path = "/account/register",
     summary = "Register a new account",
     description = "Creates a new player account. Returns 409 if the email or username is already in use.",
     request_body = RegisterRequest,
@@ -36,8 +70,8 @@ pub fn router() -> Router<Arc<AppState>> {
 )]
 pub async fn register(
     State(state): State<Arc<AppState>>,
-    Json(body): Json<RegisterRequest>,
-) -> Result<StatusCode, AppError> {
+    ValidatedBody(body): ValidatedBody<RegisterRequest>,
+) -> Result<StatusCode, ErrorResponse> {
     state
         .account_service
         .register(RegisterParams {

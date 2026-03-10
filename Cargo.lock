@@ -74,6 +74,7 @@ dependencies = [
  "prometheus",
  "r2d2",
  "redis",
+ "regex",
  "reqwest",
  "rustls",
  "serde",

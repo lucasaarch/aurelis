@@ -1,6 +1,7 @@
 use axum::Json;
 use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
+use chrono::Utc;
 use serde::Serialize;
 use thiserror::Error;
 use utoipa::ToSchema;
@@ -9,14 +10,30 @@ use crate::repositories::RepositoryError;
 
 #[derive(Debug, Serialize, ToSchema)]
 pub struct ErrorResponse {
-    pub error: String,
+    pub status: u16,
+    pub code: String,
+    pub message: String,
+    pub timestamp: String,
+    #[serde(skip)]
+    http_status: StatusCode,
 }
 
 impl ErrorResponse {
-    fn new(message: impl Into<String>) -> Json<Self> {
-        Json(Self {
-            error: message.into(),
-        })
+    pub fn new(http_status: StatusCode, code: &str, message: impl Into<String>) -> Self {
+        Self {
+            status: http_status.as_u16(),
+            code: code.to_string(),
+            message: message.into(),
+            timestamp: Utc::now().to_rfc3339(),
+            http_status,
+        }
+    }
+}
+
+impl IntoResponse for ErrorResponse {
+    fn into_response(self) -> Response {
+        let status = self.http_status;
+        (status, Json(self)).into_response()
     }
 }
 
@@ -38,20 +55,27 @@ pub enum AppError {
     Internal(#[from] anyhow::Error),
 }
 
-impl IntoResponse for AppError {
-    fn into_response(self) -> Response {
-        let (status, message) = match &self {
-            AppError::NotFound => (StatusCode::NOT_FOUND, self.to_string()),
-            AppError::Conflict(msg) => (StatusCode::CONFLICT, msg.clone()),
-            AppError::Unauthorized => (StatusCode::UNAUTHORIZED, self.to_string()),
-            AppError::BadRequest(msg) => (StatusCode::BAD_REQUEST, msg.clone()),
-            AppError::Internal(_) => (
+impl From<AppError> for ErrorResponse {
+    fn from(err: AppError) -> Self {
+        match err {
+            AppError::NotFound => {
+                ErrorResponse::new(StatusCode::NOT_FOUND, "NOT_FOUND", "Not found")
+            }
+            AppError::Conflict(msg) => {
+                ErrorResponse::new(StatusCode::CONFLICT, "CONFLICT", msg)
+            }
+            AppError::Unauthorized => {
+                ErrorResponse::new(StatusCode::UNAUTHORIZED, "UNAUTHORIZED", "Unauthorized")
+            }
+            AppError::BadRequest(msg) => {
+                ErrorResponse::new(StatusCode::BAD_REQUEST, "BAD_REQUEST", msg)
+            }
+            AppError::Internal(_) => ErrorResponse::new(
                 StatusCode::INTERNAL_SERVER_ERROR,
-                "Internal server error".to_string(),
+                "INTERNAL_SERVER_ERROR",
+                "Internal server error",
             ),
-        };
-
-        (status, ErrorResponse::new(message)).into_response()
+        }
     }
 }
 
