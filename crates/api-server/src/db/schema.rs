@@ -31,8 +31,6 @@ diesel::table! {
         email -> Varchar,
         #[max_length = 255]
         password_hash -> Varchar,
-        #[max_length = 16]
-        region -> Varchar,
         is_banned -> Bool,
         banned_at -> Nullable<Timestamptz>,
         banned_reason -> Nullable<Text>,

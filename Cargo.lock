@@ -62,6 +62,7 @@ checksum = "7f202df86484c868dbad7eaa557ef785d5c66295e41b460ef922eca0723b842c"
 name = "api-server"
 version = "0.1.0"
 dependencies = [
+ "anyhow",
  "async-trait",
  "axum",
  "bcrypt",
@@ -76,12 +77,14 @@ dependencies = [
  "rustls",
  "serde",
  "serde_json",
+ "shared",
  "sysinfo",
  "thiserror 2.0.18",
  "tokio",
  "tracing",
  "tracing-subscriber",
  "utoipa",
+ "uuid",
  "validator",
 ]
 
@@ -962,6 +965,7 @@ dependencies = [
  "itoa",
  "pq-sys",
  "r2d2",
+ "uuid",
 ]
 
 [[package]]
@@ -4197,6 +4201,12 @@ dependencies = [
 [[package]]
 name = "shared"
 version = "0.1.0"
+dependencies = [
+ "chrono",
+ "serde",
+ "serde_json",
+ "uuid",
+]
 
 [[package]]
 name = "shlex"
