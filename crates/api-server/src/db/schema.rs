@@ -48,6 +48,8 @@ diesel::table! {
         shared_storage_capacity -> Int2,
         cash -> Int8,
         stored_credits -> Int8,
+        is_admin -> Bool,
+        god_mode -> Bool,
         email_verified -> Bool,
         #[max_length = 255]
         email_verify_token -> Nullable<Varchar>,
@@ -111,7 +113,6 @@ diesel::table! {
     character_skills (character_id, skill_id) {
         character_id -> Uuid,
         skill_id -> Uuid,
-        current_level -> Int2,
         unlocked_at -> Timestamptz,
     }
 }

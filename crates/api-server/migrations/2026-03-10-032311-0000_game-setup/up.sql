@@ -11,6 +11,8 @@ CREATE TABLE
         shared_storage_capacity SMALLINT NOT NULL DEFAULT 20,
         cash BIGINT NOT NULL DEFAULT 0,
         stored_credits BIGINT NOT NULL DEFAULT 0,
+        is_admin BOOLEAN NOT NULL DEFAULT FALSE,
+        god_mode BOOLEAN NOT NULL DEFAULT FALSE,
         email_verified BOOLEAN NOT NULL DEFAULT FALSE,
         email_verify_token VARCHAR(255),
         email_verify_token_expires TIMESTAMPTZ,
