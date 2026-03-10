@@ -1,8 +1,11 @@
-use shared::models::{character::Character};
 use diesel::prelude::*;
+use shared::models::character::Character;
 
-use crate::{db::{Database, schema::characters}, models::character::CharacterModel, repositories::{Repository, RepositoryError}};
-
+use crate::{
+    db::{Database, schema::characters},
+    models::character::CharacterModel,
+    repositories::{Repository, RepositoryError},
+};
 
 pub struct CreateCharacterParams {
     pub name: String,
@@ -25,11 +28,18 @@ impl PgCharacterRepository {
         Self { db }
     }
 
-    pub async fn create(&self, account_id: uuid::Uuid, params: CreateCharacterParams) -> Result<Character, RepositoryError> {
+    pub async fn create(
+        &self,
+        account_id: uuid::Uuid,
+        params: CreateCharacterParams,
+    ) -> Result<Character, RepositoryError> {
         let model = CharacterModel::new(
             account_id,
             params.name,
-            params.class.parse().map_err(|_| RepositoryError::NotFound)?,
+            params
+                .class
+                .parse()
+                .map_err(|_| RepositoryError::NotFound)?,
         );
 
         self.run_blocking(move |conn| {
@@ -44,8 +54,8 @@ impl PgCharacterRepository {
 
     pub async fn count_by_account(&self, acc_id: uuid::Uuid) -> Result<i64, RepositoryError> {
         self.run_blocking(move |conn| {
-            use diesel::dsl::count_star;
             use crate::db::schema::characters::dsl::*;
+            use diesel::dsl::count_star;
 
             characters
                 .filter(account_id.eq(acc_id))
@@ -56,7 +66,10 @@ impl PgCharacterRepository {
         .await
     }
 
-    pub async fn list_all_by_account(&self, acc_id: uuid::Uuid) -> Result<Vec<Character>, RepositoryError> {
+    pub async fn list_all_by_account(
+        &self,
+        acc_id: uuid::Uuid,
+    ) -> Result<Vec<Character>, RepositoryError> {
         self.run_blocking(move |conn| {
             use crate::db::schema::characters::dsl::*;
 

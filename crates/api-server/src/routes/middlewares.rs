@@ -9,8 +9,8 @@ use std::sync::Arc;
 use uuid::Uuid;
 use validator::{Validate, ValidationErrors};
 
-use crate::app::AppState;
 use crate::error::ErrorResponse;
+use crate::{app::AppState, services::jwt::TokenContext};
 
 pub struct ValidatedBody<T>(pub T);
 
@@ -90,7 +90,10 @@ pub struct AuthUser(pub Uuid);
 impl FromRequestParts<Arc<AppState>> for AuthUser {
     type Rejection = Response;
 
-    async fn from_request_parts(parts: &mut Parts, state: &Arc<AppState>) -> Result<Self, Self::Rejection> {
+    async fn from_request_parts(
+        parts: &mut Parts,
+        state: &Arc<AppState>,
+    ) -> Result<Self, Self::Rejection> {
         let auth_header = parts
             .headers
             .get(axum::http::header::AUTHORIZATION)
@@ -109,10 +112,17 @@ impl FromRequestParts<Arc<AppState>> for AuthUser {
             }
         };
 
-        let claims = state.jwt_service.verify(token).map_err(|_| {
-            ErrorResponse::new(StatusCode::UNAUTHORIZED, "UNAUTHORIZED", "Invalid or expired token")
+        let claims = state
+            .jwt_service
+            .verify_with_context(token, TokenContext::Web)
+            .map_err(|_| {
+                ErrorResponse::new(
+                    StatusCode::UNAUTHORIZED,
+                    "UNAUTHORIZED",
+                    "Invalid or expired token",
+                )
                 .into_response()
-        })?;
+            })?;
 
         Ok(AuthUser(claims.sub))
     }

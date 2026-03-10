@@ -61,7 +61,7 @@ impl AccountModel {
             last_login_ip: None,
             created_at: now,
             updated_at: now,
-            deleted_at: None
+            deleted_at: None,
         }
     }
 

@@ -5,6 +5,7 @@ mod config;
 mod db;
 mod error;
 mod models;
+mod proto;
 mod repositories;
 mod routes;
 mod services;

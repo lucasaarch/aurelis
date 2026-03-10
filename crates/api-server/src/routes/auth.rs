@@ -12,7 +12,7 @@ use validator::{Validate, ValidationError};
 use crate::app::AppState;
 use crate::error::ErrorResponse;
 use crate::routes::middlewares::ValidatedBody;
-use crate::services::account::{LoginParams, RegisterParams};
+use crate::services::auth::{LoginParams, RegisterParams};
 
 fn validate_strong_password(password: &str) -> Result<(), ValidationError> {
     let checks = [
@@ -58,13 +58,13 @@ pub struct RegisterRequest {
 
 pub fn router() -> Router<Arc<AppState>> {
     Router::new()
-        .route("/account/register", post(register))
-        .route("/account/login", post(login))
+        .route("/auth/register", post(register))
+        .route("/auth/login", post(login))
 }
 
 #[utoipa::path(
     post,
-    path = "/account/register",
+    path = "/auth/register",
     summary = "Register a new account",
     description = "Creates a new player account. Returns 409 if the email or username is already in use.",
     request_body = RegisterRequest,
@@ -79,7 +79,7 @@ pub async fn register(
     ValidatedBody(body): ValidatedBody<RegisterRequest>,
 ) -> Result<StatusCode, ErrorResponse> {
     state
-        .account_service
+        .auth_service
         .register(RegisterParams {
             email: body.email,
             password: body.password,
@@ -98,12 +98,13 @@ pub struct LoginRequest {
 
 #[derive(Serialize, ToSchema)]
 pub struct LoginResponse {
-    pub token: String,
+    pub access_token: String,
+    pub refresh_token: String,
 }
 
 #[utoipa::path(
     post,
-    path = "/account/login",
+    path = "/auth/login",
     summary = "Login",
     description = "Authenticates an account and returns a JWT token.",
     request_body = LoginRequest,
@@ -118,14 +119,15 @@ pub async fn login(
     ValidatedBody(body): ValidatedBody<LoginRequest>,
 ) -> Result<Json<LoginResponse>, ErrorResponse> {
     let result = state
-        .account_service
-        .login(LoginParams {
+        .auth_service
+        .web_login(LoginParams {
             email: body.email,
             password: body.password,
         })
         .await?;
 
     Ok(Json(LoginResponse {
-        token: result.token,
+        access_token: result.access_token,
+        refresh_token: result.refresh_token,
     }))
 }

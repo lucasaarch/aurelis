@@ -17,7 +17,12 @@ pub struct MobModel {
 }
 
 impl MobModel {
-    pub fn new(slug: String, name: String, description: Option<String>, mob_type: MobTypeModel) -> Self {
+    pub fn new(
+        slug: String,
+        name: String,
+        description: Option<String>,
+        mob_type: MobTypeModel,
+    ) -> Self {
         Self {
             id: Uuid::new_v4(),
             slug,

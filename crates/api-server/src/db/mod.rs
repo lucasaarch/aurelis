@@ -36,8 +36,4 @@ impl Database {
     pub fn get(&self) -> r2d2::PooledConnection<ConnectionManager<PgConnection>> {
         self.0.get().expect("Failed to get database connection")
     }
-
-    pub fn health_check(&self) -> bool {
-        self.0.get().is_ok()
-    }
 }

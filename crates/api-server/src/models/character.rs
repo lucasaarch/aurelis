@@ -3,7 +3,9 @@ use diesel::prelude::{Insertable, Queryable};
 use shared::models::character::Character;
 use uuid::Uuid;
 
-use crate::models::{character_class::CharacterClassModel, character_location::CharacterLocationModel};
+use crate::models::{
+    character_class::CharacterClassModel, character_location::CharacterLocationModel,
+};
 
 #[derive(Queryable, Insertable)]
 #[diesel(table_name = crate::db::schema::characters)]

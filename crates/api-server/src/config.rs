@@ -13,12 +13,14 @@ pub struct DatabaseConfig {
 
 #[derive(Debug, Clone)]
 pub struct ServerConfig {
-    pub port: u16,
+    pub http_port: u16,
+    pub grpc_port: u16,
 }
 
 #[derive(Debug, Clone)]
 pub struct JwtConfig {
-    pub secret: String,
+    pub secret_web: String,
+    pub secret_game: String,
     pub expiration_seconds: u64,
     pub refresh_expiration_seconds: u64,
 }
@@ -39,10 +41,12 @@ impl Config {
                 url: require_env_var("API_DATABASE_URL")?,
             },
             server: ServerConfig {
-                port: env_var("API_SERVER_PORT", Some(8080))?,
+                http_port: env_var("API_SERVER_HTTP_PORT", Some(8080))?,
+                grpc_port: env_var("API_SERVER_HTTP_PORT", Some(50051))?,
             },
             jwt: JwtConfig {
-                secret: require_env_var("API_JWT_SECRET")?,
+                secret_web: require_env_var("API_JWT_SECRET_WEB")?,
+                secret_game: require_env_var("API_JWT_SECRET_GAME")?,
                 expiration_seconds: env_var("API_JWT_EXPIRATION_SECONDS", Some(86400))?,
                 refresh_expiration_seconds: env_var(
                     "API_JWT_REFRESH_EXPIRATION_SECONDS",

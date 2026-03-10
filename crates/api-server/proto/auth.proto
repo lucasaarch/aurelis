@@ -1,0 +1,16 @@
+syntax = "proto3";
+package auth;
+
+service AuthService {
+    rpc GameLogin (GameLoginRequest) returns (GameLoginResponse);
+}
+
+message GameLoginRequest {
+    string email = 1;
+    string password = 2;
+}
+
+message GameLoginResponse {
+    string access_token = 1;
+    string refresh_token = 2;
+}

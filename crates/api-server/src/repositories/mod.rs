@@ -5,6 +5,7 @@ use crate::db::Database;
 
 pub mod account;
 pub mod character;
+pub mod mob;
 
 #[derive(Debug, Error)]
 pub enum RepositoryError {
@@ -31,7 +32,7 @@ impl From<diesel::result::Error> for RepositoryError {
             ) => {
                 let field = info
                     .constraint_name()
-                    .and_then(|c| c.splitn(3, '_').nth(1))
+                    .and_then(|c| c.split('_').nth(1))
                     .unwrap_or("field");
                 RepositoryError::Conflict(format!("{field} already in use"))
             }

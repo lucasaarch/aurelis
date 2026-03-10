@@ -69,8 +69,9 @@ impl From<AppError> for ErrorResponse {
                 // Use the provided message as the error code and provide a human-friendly message
                 let code = msg.clone();
                 let user_message = match msg.as_str() {
-                    "MAX_CHARACTERS_REACHED" =>
-                        "Maximum number of characters reached for this account".to_string(),
+                    "MAX_CHARACTERS_REACHED" => {
+                        "Maximum number of characters reached for this account".to_string()
+                    }
                     other => other.to_string(),
                 };
 

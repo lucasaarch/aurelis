@@ -32,3 +32,10 @@ regex = "1"
 shared = { path = "../shared" }
 anyhow = "1.0.102"
 jsonwebtoken = { version = "10.3.0", default-features = false, features = ["aws_lc_rs"] }
+tonic = "0.14.5"
+prost = "0.14.3"
+tonic-prost = "0.14.5"
+
+[build-dependencies]
+tonic-prost-build = "0.14.5"
+protoc-bin-vendored = "2.0"
