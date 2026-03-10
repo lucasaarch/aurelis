@@ -1,12 +1,13 @@
 use tracing::level_filters::LevelFilter;
 
+mod app;
 mod config;
 mod db;
+mod error;
 mod models;
 mod repositories;
 mod routes;
 mod services;
-mod error;
 
 fn install_rustls_crypto_provider() {
     let _ = rustls::crypto::aws_lc_rs::default_provider().install_default();
@@ -36,4 +37,6 @@ async fn main() {
             std::process::exit(1);
         }
     };
+
+    app::run(config).await;
 }

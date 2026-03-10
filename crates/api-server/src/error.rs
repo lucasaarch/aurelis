@@ -5,7 +5,6 @@ use serde_json::json;
 use thiserror::Error;
 
 use crate::repositories::RepositoryError;
-use crate::services::password::PasswordError;
 
 #[derive(Debug, Error)]
 pub enum AppError {
@@ -51,11 +50,5 @@ impl From<RepositoryError> for AppError {
                 AppError::Internal(anyhow::anyhow!(msg))
             }
         }
-    }
-}
-
-impl From<PasswordError> for AppError {
-    fn from(err: PasswordError) -> Self {
-        AppError::Internal(anyhow::anyhow!(err.to_string()))
     }
 }

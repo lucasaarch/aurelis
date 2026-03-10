@@ -2,7 +2,7 @@ use shared::models::account::Account;
 
 use crate::error::AppError;
 use crate::repositories::account::{CreateAccountParams, PgAccountRepository};
-use crate::services::password::PasswordHasher;
+use crate::services::hash::HashService;
 
 pub struct RegisterParams {
     pub username: String,
@@ -13,14 +13,14 @@ pub struct RegisterParams {
 #[derive(Clone)]
 pub struct AccountService {
     repository: PgAccountRepository,
-    password_hasher: PasswordHasher,
+    hash_service: HashService,
 }
 
 impl AccountService {
-    pub fn new(repository: PgAccountRepository, password_hasher: PasswordHasher) -> Self {
+    pub fn new(repository: PgAccountRepository, hash_service: HashService) -> Self {
         Self {
             repository,
-            password_hasher,
+            hash_service,
         }
     }
 
@@ -33,7 +33,7 @@ impl AccountService {
             return Err(AppError::Conflict("Username already exists".to_string()));
         }
         
-        let password_hash = self.password_hasher.hash(&params.password)?;
+        let password_hash = self.hash_service.hash(&params.password)?;
 
         self.repository
             .create(CreateAccountParams {
