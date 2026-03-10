@@ -1,5 +1,5 @@
-pub mod mob;
 pub mod item;
+pub mod mob;
 pub mod mob_drop_rate;
 
 use axum::Router;

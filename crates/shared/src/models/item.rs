@@ -3,7 +3,10 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use uuid::Uuid;
 
-use crate::models::{character_class::CharacterClass, equipment_slot::EquipmentSlot, inventory_type::InventoryType, item_rarity::ItemRarity};
+use crate::models::{
+    character_class::CharacterClass, equipment_slot::EquipmentSlot, inventory_type::InventoryType,
+    item_rarity::ItemRarity,
+};
 
 #[derive(Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -18,5 +21,6 @@ pub struct Item {
     pub level_req: Option<i16>,
     pub stats: Option<Value>,
     pub created_at: NaiveDateTime,
-    pub inventory_type: InventoryType
+    pub inventory_type: InventoryType,
+    pub max_stack: i16,
 }

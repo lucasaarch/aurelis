@@ -16,6 +16,7 @@ pub struct CreateItemInput {
     pub level_req: Option<i16>,
     pub stats: Option<serde_json::Value>,
     pub inventory_type: String,
+    pub max_stack: Option<i16>,
 }
 
 #[derive(Clone)]
@@ -68,6 +69,7 @@ impl ItemService {
                 level_req: input.level_req,
                 stats: input.stats,
                 inventory_type: input.inventory_type,
+                max_stack: input.max_stack,
             })
             .await
             .map_err(Into::into)
@@ -97,28 +99,40 @@ impl ItemService {
             | InventoryType::QuestItem
             | InventoryType::Special => {
                 let inv_type: String = item.inventory_type.into();
+                let max_stack = item.max_stack;
+                let mut remaining = quantity;
 
-                if let Some(existing) = self
-                    .inventory_service
-                    .find_slot_by_item(character_id, inv_type.clone(), item_id)
-                    .await?
-                {
-                    self.inventory_service
-                        .increment_quantity(existing.id, quantity)
-                        .await?;
+                while remaining > 0 {
+                    if let Some(existing) = self
+                        .inventory_service
+                        .find_slot_by_item_with_space(
+                            character_id,
+                            inv_type.clone(),
+                            item_id,
+                            max_stack,
+                        )
+                        .await?
+                    {
+                        let space = max_stack - existing.quantity;
+                        let to_add = remaining.min(space);
+                        self.inventory_service
+                            .increment_quantity(existing.id, to_add)
+                            .await?;
+                        remaining -= to_add;
+                    } else {
+                        let slot = self
+                            .inventory_service
+                            .find_next_available_slot(character_id, inv_type.clone())
+                            .await?
+                            .ok_or(AppError::Conflict("INVENTORY_FULL".into()))?;
 
-                    return Ok(());
+                        let to_add = remaining.min(max_stack);
+                        self.inventory_service
+                            .insert_item_slot(character_id, inv_type.clone(), item_id, slot, to_add)
+                            .await?;
+                        remaining -= to_add;
+                    }
                 }
-
-                let slot = self
-                    .inventory_service
-                    .find_next_available_slot(character_id, inv_type.clone())
-                    .await?
-                    .ok_or(AppError::Conflict("INVENTORY_FULL".into()))?;
-
-                self.inventory_service
-                    .insert_item_slot(character_id, inv_type.clone(), item_id, slot, quantity)
-                    .await?;
             }
             _ => {}
         }

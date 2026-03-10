@@ -1,11 +1,25 @@
 use tonic::{Request, Response, Status};
 
 use crate::{
-    proto::auth::{GameLoginRequest, GameLoginResponse, RefreshGameTokenRequest, auth_service_server::AuthService as GrpcAuthService},
-    services::{auth::{AuthService, LoginParams, RefreshTokenParams}, jwt::TokenContext},
+    proto::auth::{
+        GameLoginRequest, GameLoginResponse, RefreshGameTokenRequest, RefreshGameTokenResponse,
+        auth_service_server::AuthService as GrpcAuthService,
+    },
+    services::{
+        auth::{AuthService, LoginParams, RefreshTokenParams},
+        jwt::TokenContext,
+    },
 };
 
-pub struct GrpcAuthServiceImpl(pub AuthService);
+pub struct GrpcAuthServiceImpl {
+    auth_service: AuthService,
+}
+
+impl GrpcAuthServiceImpl {
+    pub fn new(auth_service: AuthService) -> Self {
+        Self { auth_service }
+    }
+}
 
 #[tonic::async_trait]
 impl GrpcAuthService for GrpcAuthServiceImpl {
@@ -21,10 +35,7 @@ impl GrpcAuthService for GrpcAuthServiceImpl {
             context: TokenContext::Game,
         };
 
-        let result = self
-            .0
-            .login(params)
-            .await?;
+        let result = self.auth_service.login(params).await?;
 
         Ok(Response::new(GameLoginResponse {
             access_token: result.access_token,
@@ -35,7 +46,7 @@ impl GrpcAuthService for GrpcAuthServiceImpl {
     async fn refresh_game_token(
         &self,
         request: Request<RefreshGameTokenRequest>,
-    ) -> Result<Response<GameLoginResponse>, Status> {
+    ) -> Result<Response<RefreshGameTokenResponse>, Status> {
         let req = request.into_inner();
 
         let params = RefreshTokenParams {
@@ -43,12 +54,9 @@ impl GrpcAuthService for GrpcAuthServiceImpl {
             context: TokenContext::Game,
         };
 
-        let result = self
-            .0
-            .refresh_token(params)
-            .await?;
+        let result = self.auth_service.refresh_token(params).await?;
 
-        Ok(Response::new(GameLoginResponse {
+        Ok(Response::new(RefreshGameTokenResponse {
             access_token: result.access_token,
             refresh_token: result.refresh_token,
         }))

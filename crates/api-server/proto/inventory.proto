@@ -1,0 +1,15 @@
+syntax = "proto3";
+package inventory;
+
+service InventoryService {
+  rpc MoveItem(MoveItemRequest) returns (MoveItemResponse);
+}
+
+message MoveItemRequest {
+  string character_id = 1;
+  string inventory_type = 2;
+  int32 from_slot = 3;
+  int32 to_slot = 4;
+}
+
+message MoveItemResponse {}

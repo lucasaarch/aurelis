@@ -17,11 +17,7 @@ pub struct InventoryModel {
 }
 
 impl InventoryModel {
-    pub fn new(
-        character_id: Uuid,
-        inventory_type: InventoryTypeModel,
-        capacity: i16,
-    ) -> Self {
+    pub fn new(character_id: Uuid, inventory_type: InventoryTypeModel, capacity: i16) -> Self {
         Self {
             id: Uuid::new_v4(),
             character_id,

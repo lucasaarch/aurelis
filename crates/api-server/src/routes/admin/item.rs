@@ -3,9 +3,9 @@ use axum::http::StatusCode;
 use axum::routing::post;
 use axum::{Json, Router};
 use serde::{Deserialize, Serialize};
-use uuid::Uuid;
 use std::sync::Arc;
 use utoipa::ToSchema;
+use uuid::Uuid;
 use validator::Validate;
 
 use crate::app::AppState;
@@ -13,7 +13,8 @@ use crate::error::ErrorResponse;
 use crate::routes::middlewares::{AuthUser, ValidatedBody};
 use crate::services::item::CreateItemInput;
 use crate::utils::validation::{
-    validate_class, validate_equipment_slot, validate_inventory_type, validate_rarity, validate_stats, validate_uuid
+    validate_class, validate_equipment_slot, validate_inventory_type, validate_rarity,
+    validate_stats, validate_uuid,
 };
 
 #[derive(Deserialize, ToSchema, Validate)]
@@ -40,6 +41,9 @@ pub struct CreateItemRequest {
 
     #[validate(custom(function = validate_inventory_type))]
     pub inventory_type: String,
+
+    #[validate(range(min = 1))]
+    pub max_stack: Option<i16>,
 }
 
 #[derive(Serialize, ToSchema)]
@@ -67,7 +71,6 @@ pub struct GiveItemRequest {
 pub struct GiveItemResponse {
     pub ok: bool,
 }
-
 
 pub fn router() -> Router<Arc<AppState>> {
     Router::new()
@@ -105,6 +108,7 @@ pub async fn create_item(
                 level_req: body.level_req,
                 stats: body.stats,
                 inventory_type: body.inventory_type,
+                max_stack: body.max_stack,
             },
         )
         .await
@@ -119,7 +123,6 @@ pub async fn create_item(
         }),
     ))
 }
-
 
 #[utoipa::path(
     post,
@@ -140,7 +143,12 @@ pub async fn give_item(
 ) -> Result<(StatusCode, Json<GiveItemResponse>), ErrorResponse> {
     state
         .item_service
-        .give_item(admin_id, body.character_id, body.item_id, body.quantity.unwrap_or(1))
+        .give_item(
+            admin_id,
+            body.character_id,
+            body.item_id,
+            body.quantity.unwrap_or(1),
+        )
         .await
         .map_err(ErrorResponse::from)?;
 

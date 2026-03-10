@@ -57,7 +57,6 @@ impl From<InventoryTypeModel> for InventoryType {
     }
 }
 
-
 impl std::str::FromStr for InventoryTypeModel {
     type Err = ();
 

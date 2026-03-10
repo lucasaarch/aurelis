@@ -12,14 +12,23 @@ pub struct MobDropRateService {
 }
 
 impl MobDropRateService {
-    pub fn new(repository: PgMobDropRateRepository, account_repository: PgAccountRepository) -> Self {
+    pub fn new(
+        repository: PgMobDropRateRepository,
+        account_repository: PgAccountRepository,
+    ) -> Self {
         Self {
             repository,
             account_repository,
         }
     }
 
-    pub async fn create(&self, actor_id: Uuid, mob_id: Uuid, item_id: Uuid, drop_chance: BigDecimal) -> Result<MobDropRate, AppError> {
+    pub async fn create(
+        &self,
+        actor_id: Uuid,
+        mob_id: Uuid,
+        item_id: Uuid,
+        drop_chance: BigDecimal,
+    ) -> Result<MobDropRate, AppError> {
         let account = match self.account_repository.find_by_id(actor_id).await {
             Ok(a) => a,
             Err(_) => return Err(AppError::Unauthorized),
@@ -30,7 +39,11 @@ impl MobDropRateService {
         }
 
         self.repository
-            .create(CreateMobDropRateParams { mob_id, item_id, drop_chance })
+            .create(CreateMobDropRateParams {
+                mob_id,
+                item_id,
+                drop_chance,
+            })
             .await
             .map_err(Into::into)
     }

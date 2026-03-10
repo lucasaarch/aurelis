@@ -5,7 +5,8 @@ use shared::models::item::Item;
 use uuid::Uuid;
 
 use crate::models::{
-    character_class::CharacterClassModel, equipment_slot::EquipmentSlotModel, inventory_type::InventoryTypeModel, item_rarity::ItemRarityModel
+    character_class::CharacterClassModel, equipment_slot::EquipmentSlotModel,
+    inventory_type::InventoryTypeModel, item_rarity::ItemRarityModel,
 };
 
 #[derive(Queryable, Insertable)]
@@ -21,7 +22,8 @@ pub struct ItemModel {
     pub stats: Option<Value>,
     pub created_at: NaiveDateTime,
     pub slug: String,
-    pub inventory_type: InventoryTypeModel
+    pub inventory_type: InventoryTypeModel,
+    pub max_stack: i16,
 }
 
 impl ItemModel {
@@ -35,6 +37,7 @@ impl ItemModel {
         stats: Option<Value>,
         slug: String,
         inventory_type: InventoryTypeModel,
+        max_stack: i16,
     ) -> Self {
         use chrono::Utc;
         Self {
@@ -49,6 +52,7 @@ impl ItemModel {
             created_at: Utc::now().naive_utc(),
             slug,
             inventory_type,
+            max_stack,
         }
     }
 
@@ -71,6 +75,7 @@ impl From<ItemModel> for Item {
             created_at: model.created_at,
             slug: model.slug,
             inventory_type: model.inventory_type.into(),
+            max_stack: model.max_stack,
         }
     }
 }

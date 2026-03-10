@@ -12,23 +12,27 @@ use utoipa_scalar::{Scalar, Servable};
 use crate::config::Config;
 use crate::db::Database;
 use crate::grpc::auth::GrpcAuthServiceImpl;
+use crate::grpc::character::GrpcCharacterServiceImpl;
+use crate::grpc::inventory::GrpcInventoryServiceImpl;
 use crate::proto::auth::auth_service_server::AuthServiceServer;
+use crate::proto::character::character_service_server::CharacterServiceServer;
+use crate::proto::inventory::inventory_service_server::InventoryServiceServer;
 use crate::repositories::account::PgAccountRepository;
 use crate::repositories::character::PgCharacterRepository;
+use crate::repositories::inventory::PgInventoryRepository;
+use crate::repositories::item::PgItemRepository;
 use crate::repositories::mob::PgMobRepository;
 use crate::repositories::mob_drop_rate::PgMobDropRateRepository;
-use crate::repositories::item::PgItemRepository;
-use crate::repositories::inventory::PgInventoryRepository;
 use crate::routes;
 use crate::services::account::AccountService;
 use crate::services::auth::AuthService;
 use crate::services::character::CharacterService;
 use crate::services::hash::HashService;
 use crate::services::inventory::InventoryService;
+use crate::services::item::ItemService;
 use crate::services::jwt::JwtService;
 use crate::services::mob::MobService;
 use crate::services::mob_drop_rate::MobDropRateService;
-use crate::services::item::ItemService;
 
 struct SecurityAddon;
 
@@ -55,13 +59,10 @@ impl Modify for SecurityAddon {
         routes::admin::item::create_item,
         routes::auth::register,
         routes::auth::login,
-        routes::character::create_character,
-        routes::character::list_characters,
     ),
     tags(
         (name = "Admin", description = "Admin-only endpoints"),
         (name = "Auth", description = "Authentication endpoints"),
-        (name = "Character", description = "Character management"),
     ),
     modifiers(&SecurityAddon),
     info(
@@ -78,6 +79,7 @@ pub struct AppState {
     pub mob_drop_rate_service: MobDropRateService,
     pub jwt_service: JwtService,
     pub item_service: ItemService,
+    pub inventory_service: InventoryService,
 }
 
 impl AppState {
@@ -87,7 +89,6 @@ impl AppState {
         let mob_repository = PgMobRepository::new(db.clone());
         let item_repository = PgItemRepository::new(db.clone());
         let inventory_repository = PgInventoryRepository::new(db.clone());
-
 
         let hash_service = HashService::default();
         let jwt_service = JwtService::new(
@@ -99,7 +100,6 @@ impl AppState {
             config.jwt.refresh_expiration_seconds,
         );
 
-
         let account_service = AccountService::new(account_repository.clone());
         let auth_service = AuthService::new(
             account_repository.clone(),
@@ -110,10 +110,14 @@ impl AppState {
             CharacterService::new(character_repository, account_repository.clone());
         let mob_service = MobService::new(mob_repository, account_repository.clone());
         let mob_drop_rate_repository = PgMobDropRateRepository::new(db.clone());
-        let mob_drop_rate_service = MobDropRateService::new(mob_drop_rate_repository, account_repository.clone());
+        let mob_drop_rate_service =
+            MobDropRateService::new(mob_drop_rate_repository, account_repository.clone());
         let inventory_service = InventoryService::new(inventory_repository.clone());
-        let item_service = ItemService::new(item_repository, account_service.clone(), inventory_service.clone());
-
+        let item_service = ItemService::new(
+            item_repository,
+            account_service.clone(),
+            inventory_service.clone(),
+        );
 
         Self {
             auth_service,
@@ -122,6 +126,7 @@ impl AppState {
             mob_drop_rate_service,
             jwt_service,
             item_service,
+            inventory_service,
         }
     }
 }
@@ -138,7 +143,6 @@ pub async fn run(config: Config) {
             let app = Router::new()
                 .merge(Scalar::with_url("/docs", ApiDoc::openapi()))
                 .merge(routes::auth::router())
-                .merge(routes::character::router())
                 .merge(routes::admin::router())
                 .with_state(state);
 
@@ -163,16 +167,27 @@ pub async fn run(config: Config) {
 
             info!("gRPC server listening on {addr}");
 
+            let grpc_auth_service = GrpcAuthServiceImpl::new(state.auth_service.clone());
+            let grpc_character_service = GrpcCharacterServiceImpl::new(
+                state.auth_service.clone(),
+                state.character_service.clone(),
+            );
+            let grpc_inventory_service = GrpcInventoryServiceImpl::new(
+                state.auth_service.clone(),
+                state.inventory_service.clone(),
+                state.character_service.clone(),
+            );
+
             Server::builder()
                 .add_service(
                     ReflectionBuilder::configure()
-                        .register_encoded_file_descriptor_set(
-                            crate::proto::FILE_DESCRIPTOR_SET,
-                        )
+                        .register_encoded_file_descriptor_set(crate::proto::FILE_DESCRIPTOR_SET)
                         .build_v1()
                         .unwrap(),
                 )
-                .add_service(AuthServiceServer::new(GrpcAuthServiceImpl(state.auth_service.clone())))
+                .add_service(AuthServiceServer::new(grpc_auth_service))
+                .add_service(CharacterServiceServer::new(grpc_character_service))
+                .add_service(InventoryServiceServer::new(grpc_inventory_service))
                 .serve(addr.parse().unwrap())
                 .await
                 .expect("gRPC server error");

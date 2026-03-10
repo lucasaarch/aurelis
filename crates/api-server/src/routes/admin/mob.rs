@@ -3,9 +3,9 @@ use axum::http::StatusCode;
 use axum::routing::post;
 use axum::{Json, Router};
 use serde::{Deserialize, Serialize};
-use validator::Validate;
 use std::sync::Arc;
 use utoipa::ToSchema;
+use validator::Validate;
 
 use crate::app::AppState;
 use crate::error::ErrorResponse;

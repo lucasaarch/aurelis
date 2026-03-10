@@ -30,7 +30,10 @@ impl PgMobDropRateRepository {
         Self { db }
     }
 
-    pub async fn create(&self, params: CreateMobDropRateParams) -> Result<MobDropRate, RepositoryError> {
+    pub async fn create(
+        &self,
+        params: CreateMobDropRateParams,
+    ) -> Result<MobDropRate, RepositoryError> {
         let model = MobDropRateModel::new(params.mob_id, params.item_id, params.drop_chance);
 
         self.run_blocking(move |conn| {

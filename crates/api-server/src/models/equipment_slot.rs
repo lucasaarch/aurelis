@@ -25,7 +25,7 @@ pub enum EquipmentSlotModel {
     AccBottomPiece,
     AccTopPiece,
     AccWeapon,
-    AccSupportUnit
+    AccSupportUnit,
 }
 
 impl ToSql<crate::db::schema::sql_types::EquipmentSlotType, Pg> for EquipmentSlotModel {

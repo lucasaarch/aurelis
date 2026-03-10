@@ -2,7 +2,10 @@ use diesel::prelude::*;
 use shared::models::character::Character;
 
 use crate::{
-    db::{Database, schema::{characters, inventory}},
+    db::{
+        Database,
+        schema::{characters, inventory},
+    },
     models::{character::CharacterModel, inventory::InventoryModel},
     repositories::{Repository, RepositoryError},
 };
@@ -28,6 +31,19 @@ impl PgCharacterRepository {
         Self { db }
     }
 
+    pub async fn find_by_id(&self, character_id: uuid::Uuid) -> Result<Character, RepositoryError> {
+        self.run_blocking(move |conn| {
+            use crate::db::schema::characters::dsl::*;
+
+            characters
+                .filter(id.eq(character_id))
+                .first::<CharacterModel>(conn)
+                .map(|c| c.into())
+                .map_err(Into::into)
+        })
+        .await
+    }
+
     pub async fn create(
         &self,
         account_id: uuid::Uuid,
@@ -44,7 +60,7 @@ impl PgCharacterRepository {
 
         self.run_blocking(move |conn| {
             use crate::models::inventory_type::InventoryTypeModel::*;
-            
+
             conn.transaction::<Character, RepositoryError, _>(|conn| {
                 let character: Character = diesel::insert_into(characters::table)
                     .values(&model)
@@ -65,7 +81,6 @@ impl PgCharacterRepository {
 
                 Ok(character)
             })
-            .map_err(Into::into)
         })
         .await
     }

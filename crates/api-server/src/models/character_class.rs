@@ -45,6 +45,16 @@ impl From<CharacterClassModel> for CharacterClass {
     }
 }
 
+impl From<CharacterClass> for CharacterClassModel {
+    fn from(class: CharacterClass) -> Self {
+        match class {
+            CharacterClass::Kael => CharacterClassModel::Kael,
+            CharacterClass::Rin => CharacterClassModel::Rin,
+            CharacterClass::Sirena => CharacterClassModel::Sirena,
+        }
+    }
+}
+
 impl std::str::FromStr for CharacterClassModel {
     type Err = ();
 

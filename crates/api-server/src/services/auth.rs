@@ -14,12 +14,12 @@ pub struct RegisterParams {
 pub struct LoginParams {
     pub email: String,
     pub password: String,
-    pub context: TokenContext
+    pub context: TokenContext,
 }
 
 pub struct RefreshTokenParams {
     pub refresh_token: String,
-    pub context: TokenContext
+    pub context: TokenContext,
 }
 
 pub struct LoginResult {
@@ -45,6 +45,19 @@ impl AuthService {
             hash_service,
             jwt_service,
         }
+    }
+
+    pub async fn authenticate(
+        &self,
+        token: &str,
+        context: TokenContext,
+    ) -> Result<Account, AppError> {
+        let claims = self.jwt_service.verify_with_context(token, context)?;
+
+        self.repository
+            .find_by_id(claims.sub)
+            .await
+            .map_err(|_| AppError::Unauthorized)
     }
 
     pub async fn register(&self, params: RegisterParams) -> Result<Account, AppError> {
@@ -102,11 +115,10 @@ impl AuthService {
             .await
             .map_err(|_| AppError::Unauthorized)?;
 
-
         match params.context {
             TokenContext::Game => self.check_if_can_perform_game_login(&account)?,
             TokenContext::Web => (),
-         }
+        }
 
         let access_token = self
             .jwt_service
@@ -126,11 +138,12 @@ impl AuthService {
         if account.banned_at.is_some() {
             let reason = account
                 .banned_reason
-                .as_ref()
-                .map(|s| s.as_str())
+                .as_deref()
                 .unwrap_or("No reason provided");
 
-            return Err(AppError::PermissionDenied(format!("Account permanently banned: {reason}")));
+            return Err(AppError::PermissionDenied(format!(
+                "Account permanently banned: {reason}"
+            )));
         }
 
         if let Some(until) = account.suspended_until {

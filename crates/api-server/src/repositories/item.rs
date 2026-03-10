@@ -17,6 +17,7 @@ pub struct CreateItemParams {
     pub stats: Option<serde_json::Value>,
     pub slug: String,
     pub inventory_type: String,
+    pub max_stack: Option<i16>,
 }
 
 #[derive(Clone)]
@@ -36,11 +37,10 @@ impl PgItemRepository {
     }
 
     pub async fn create(&self, params: CreateItemParams) -> Result<Item, RepositoryError> {
-        // Convert strings to enum models where needed inside ItemModel::new
         let class_model = params.class.and_then(|s| s.parse().ok());
         let equipment_slot_model = params.equipment_slot.and_then(|s| s.parse().ok());
+        let max_stack = params.max_stack.unwrap_or(1);
 
-        // Map rarity string to ItemRarityModel via parsing in ItemModel::new call
         let model = ItemModel::new(
             params.name.clone(),
             params.description,
@@ -57,6 +57,7 @@ impl PgItemRepository {
                 .inventory_type
                 .parse()
                 .map_err(|_| RepositoryError::NotFound)?,
+            max_stack,
         );
 
         self.run_blocking(move |conn| {

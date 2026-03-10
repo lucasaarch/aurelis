@@ -289,6 +289,7 @@ diesel::table! {
         #[max_length = 64]
         slug -> Varchar,
         inventory_type -> InventoryType,
+        max_stack -> Int2,
     }
 }
 

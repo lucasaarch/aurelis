@@ -99,11 +99,9 @@ impl From<AppError> for ErrorResponse {
                 "INTERNAL_SERVER_ERROR",
                 "Internal server error",
             ),
-            AppError::PermissionDenied(msg) => ErrorResponse::new(
-                StatusCode::FORBIDDEN,
-                "PERMISSION_DENIED",
-                &msg,
-            ),
+            AppError::PermissionDenied(msg) => {
+                ErrorResponse::new(StatusCode::FORBIDDEN, "PERMISSION_DENIED", msg)
+            }
         }
     }
 }

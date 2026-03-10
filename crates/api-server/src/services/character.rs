@@ -69,4 +69,23 @@ impl CharacterService {
             Err(_) => Err(AppError::Internal(anyhow::anyhow!("DB error"))),
         }
     }
+
+    pub async fn verify_ownership(
+        &self,
+        account_id: Uuid,
+        character_id: Uuid,
+    ) -> Result<(), AppError> {
+        let character = match self.character_repository.find_by_id(character_id).await {
+            Ok(c) => c,
+            Err(_) => return Err(AppError::NotFound),
+        };
+
+        if character.account_id != account_id {
+            return Err(AppError::PermissionDenied(
+                "Character does not belong to this account".into(),
+            ));
+        }
+
+        Ok(())
+    }
 }

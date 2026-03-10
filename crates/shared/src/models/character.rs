@@ -4,7 +4,6 @@ use uuid::Uuid;
 
 use crate::models::{character_class::CharacterClass, character_location::CharacterLocation};
 
-
 #[derive(Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Character {

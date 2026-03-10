@@ -18,7 +18,7 @@ use crate::utils::validation::validate_drop_chance;
 pub struct CreateMobDropRateRequest {
     #[schema(value_type = String, format = "uuid")]
     pub mob_id: Uuid,
-    
+
     #[schema(value_type = String, format = "uuid")]
     pub item_id: Uuid,
 

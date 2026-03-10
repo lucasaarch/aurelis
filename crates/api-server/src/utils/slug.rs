@@ -1,4 +1,3 @@
-
 pub fn generate_slug(name: &str) -> String {
     let mut slug = name.to_lowercase();
     // replace non-alnum and not underscore with '_'

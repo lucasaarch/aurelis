@@ -1,21 +1,27 @@
 syntax = "proto3";
+
 package auth;
 
 service AuthService {
-    rpc GameLogin (GameLoginRequest) returns (GameLoginResponse);
-    rpc RefreshGameToken (RefreshGameTokenRequest) returns (GameLoginResponse);
+  rpc GameLogin(GameLoginRequest) returns (GameLoginResponse);
+  rpc RefreshGameToken(RefreshGameTokenRequest) returns (RefreshGameTokenResponse);
 }
 
 message GameLoginRequest {
-    string email = 1;
-    string password = 2;
+  string email = 1;
+  string password = 2;
 }
 
 message GameLoginResponse {
-    string access_token = 1;
-    string refresh_token = 2;
+  string access_token = 1;
+  string refresh_token = 2;
 }
 
 message RefreshGameTokenRequest {
-    string refresh_token = 1;
+  string refresh_token = 1;
+}
+
+message RefreshGameTokenResponse {
+  string access_token = 1;
+  string refresh_token = 2;
 }
