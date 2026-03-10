@@ -69,3 +69,34 @@ pub fn validate_uuid(value: &Uuid) -> Result<(), ValidationError> {
         Err(_) => Err(ValidationError::new("invalid_uuid")),
     }
 }
+
+pub fn validate_strong_password(password: &str) -> Result<(), ValidationError> {
+    let checks = [
+        (
+            password.chars().any(|c| c.is_uppercase()),
+            "must contain at least one uppercase letter",
+        ),
+        (
+            password.chars().any(|c| c.is_lowercase()),
+            "must contain at least one lowercase letter",
+        ),
+        (
+            password.chars().any(|c| c.is_ascii_digit()),
+            "must contain at least one digit",
+        ),
+        (
+            password.chars().any(|c| !c.is_alphanumeric()),
+            "must contain at least one special character",
+        ),
+    ];
+
+    for (valid, msg) in checks {
+        if !valid {
+            let mut err = ValidationError::new("strong_password");
+            err.message = Some(msg.into());
+            return Err(err);
+        }
+    }
+
+    Ok(())
+}

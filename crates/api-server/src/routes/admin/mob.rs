@@ -11,7 +11,7 @@ use crate::app::AppState;
 use crate::error::ErrorResponse;
 use crate::routes::middlewares::{AuthUser, ValidatedBody};
 use crate::services::mob::CreateMobInput;
-use crate::utils::validation::validate_mob_type;
+use shared::utils::validation::validate_mob_type;
 
 #[derive(Deserialize, ToSchema, Validate)]
 pub struct CreateMobRequest {

@@ -12,7 +12,7 @@ use validator::Validate;
 use crate::app::AppState;
 use crate::error::ErrorResponse;
 use crate::routes::middlewares::{AuthUser, ValidatedBody};
-use crate::utils::validation::validate_drop_chance;
+use shared::utils::validation::validate_drop_chance;
 
 #[derive(Deserialize, ToSchema, Validate)]
 pub struct CreateMobDropRateRequest {

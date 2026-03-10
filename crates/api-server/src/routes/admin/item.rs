@@ -12,7 +12,7 @@ use crate::app::AppState;
 use crate::error::ErrorResponse;
 use crate::routes::middlewares::{AuthUser, ValidatedBody};
 use crate::services::item::CreateItemInput;
-use crate::utils::validation::{
+use shared::utils::validation::{
     validate_class, validate_equipment_slot, validate_inventory_type, validate_rarity,
     validate_stats, validate_uuid,
 };

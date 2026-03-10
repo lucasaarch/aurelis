@@ -14,9 +14,6 @@ use crate::db::Database;
 use crate::grpc::auth::GrpcAuthServiceImpl;
 use crate::grpc::character::GrpcCharacterServiceImpl;
 use crate::grpc::inventory::GrpcInventoryServiceImpl;
-use crate::proto::auth::auth_service_server::AuthServiceServer;
-use crate::proto::character::character_service_server::CharacterServiceServer;
-use crate::proto::inventory::inventory_service_server::InventoryServiceServer;
 use crate::repositories::account::PgAccountRepository;
 use crate::repositories::character::PgCharacterRepository;
 use crate::repositories::inventory::PgInventoryRepository;
@@ -33,6 +30,9 @@ use crate::services::item::ItemService;
 use crate::services::jwt::JwtService;
 use crate::services::mob::MobService;
 use crate::services::mob_drop_rate::MobDropRateService;
+use shared::proto::auth::auth_service_server::AuthServiceServer;
+use shared::proto::character::character_service_server::CharacterServiceServer;
+use shared::proto::inventory::inventory_service_server::InventoryServiceServer;
 
 struct SecurityAddon;
 
@@ -181,7 +181,7 @@ pub async fn run(config: Config) {
             Server::builder()
                 .add_service(
                     ReflectionBuilder::configure()
-                        .register_encoded_file_descriptor_set(crate::proto::FILE_DESCRIPTOR_SET)
+                        .register_encoded_file_descriptor_set(shared::proto::FILE_DESCRIPTOR_SET)
                         .build_v1()
                         .unwrap(),
                 )

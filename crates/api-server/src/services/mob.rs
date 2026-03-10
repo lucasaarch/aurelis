@@ -1,8 +1,8 @@
 use crate::error::AppError;
 use crate::repositories::account::PgAccountRepository;
 use crate::repositories::mob::{CreateMobParams, PgMobRepository};
-use crate::utils::slug::generate_slug;
 use shared::models::mob::Mob;
+use shared::utils::slug::generate_slug;
 use uuid::Uuid;
 
 pub struct CreateMobInput {

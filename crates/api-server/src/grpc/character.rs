@@ -1,15 +1,14 @@
 use tonic::{Request, Response, Status};
 
-use crate::proto::character::character_service_server::CharacterService as GrpcCharacterService;
-use crate::proto::character::{
-    Character, CreateCharacterRequest, CreateCharacterResponse, ListCharactersRequest,
-    ListCharactersResponse,
-};
 use crate::services::auth::AuthService;
 use crate::services::character::{CharacterService, CreateCharacterInput};
 use crate::services::jwt::TokenContext;
-use crate::utils::datetime::format_naive_datetime;
 use crate::utils::extractors::extract_access_token_from_metadata;
+use shared::proto::character::{
+    Character, CreateCharacterRequest, CreateCharacterResponse, ListCharactersRequest,
+    ListCharactersResponse, character_service_server::CharacterService as GrpcCharacterService,
+};
+use shared::utils::datetime::format_naive_datetime;
 
 pub struct GrpcCharacterServiceImpl {
     auth_service: AuthService,

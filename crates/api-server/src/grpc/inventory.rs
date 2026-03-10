@@ -1,18 +1,19 @@
 use tonic::{Request, Response, Status};
 
-use crate::{
+use shared::{
     proto::inventory::{
         DeleteItemRequest, DeleteItemResponse, InventoryItem as ProtoInventoryItem,
         ListItemsRequest, ListItemsResponse, MoveItemRequest, MoveItemResponse,
     },
+    utils::datetime::format_naive_datetime,
+};
+
+use crate::{
     services::{
         auth::AuthService, character::CharacterService, inventory::InventoryService,
         jwt::TokenContext,
     },
-    utils::{
-        datetime::format_naive_datetime, extractors::extract_access_token_from_metadata,
-        parsers::parse_uuid,
-    },
+    utils::{extractors::extract_access_token_from_metadata, parsers::parse_uuid},
 };
 
 pub struct GrpcInventoryServiceImpl {
@@ -36,7 +37,7 @@ impl GrpcInventoryServiceImpl {
 }
 
 #[tonic::async_trait]
-impl crate::proto::inventory::inventory_service_server::InventoryService
+impl shared::proto::inventory::inventory_service_server::InventoryService
     for GrpcInventoryServiceImpl
 {
     async fn move_item(
@@ -136,7 +137,7 @@ impl crate::proto::inventory::inventory_service_server::InventoryService
             .into_iter()
             .map(|detailed| {
                 // `detailed` is InventoryDetailedItem containing both inventory and item fields
-                let proto_detail = crate::proto::inventory::ItemDetail {
+                let proto_detail = shared::proto::inventory::ItemDetail {
                     id: detailed.item_id.map(|u| u.to_string()).unwrap_or_default(),
                     name: detailed.name.clone(),
                     description: detailed.description.clone().unwrap_or_default(),

@@ -1,14 +1,13 @@
 use tonic::{Request, Response, Status};
 
-use crate::{
-    proto::auth::{
-        GameLoginRequest, GameLoginResponse, RefreshGameTokenRequest, RefreshGameTokenResponse,
-        auth_service_server::AuthService as GrpcAuthService,
-    },
-    services::{
-        auth::{AuthService, LoginParams, RefreshTokenParams},
-        jwt::TokenContext,
-    },
+use crate::services::{
+    auth::{AuthService, LoginParams, RefreshTokenParams},
+    jwt::TokenContext,
+};
+
+use shared::proto::auth::{
+    GameLoginRequest, GameLoginResponse, RefreshGameTokenRequest, RefreshGameTokenResponse,
+    auth_service_server::AuthService as GrpcAuthService,
 };
 
 pub struct GrpcAuthServiceImpl {

@@ -2,10 +2,10 @@ import { Eye, EyeOff } from "lucide-react";
 import { useState } from "react";
 import type { UseFormReturn } from "react-hook-form";
 import { Controller } from "react-hook-form";
-import { Button } from "@/components/ui/button";
-import { Field, FieldError, FieldLabel } from "@/components/ui/field";
-import { Input } from "@/components/ui/input";
-import type { LoginValues } from "@/views/login-view";
+import { Button } from "@/components/ui/Button";
+import { Field, FieldError, FieldLabel } from "@/components/ui/Field";
+import { Input } from "@/components/ui/Input";
+import type { LoginValues } from "@/views/LoginView";
 
 interface LoginFormProps {
   form: UseFormReturn<LoginValues>;

@@ -4,7 +4,6 @@ pub mod db;
 pub mod error;
 pub mod grpc;
 pub mod models;
-pub mod proto;
 pub mod repositories;
 pub mod routes;
 pub mod services;

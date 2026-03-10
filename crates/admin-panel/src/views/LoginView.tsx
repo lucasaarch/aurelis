@@ -2,14 +2,14 @@ import { standardSchemaResolver } from "@hookform/resolvers/standard-schema";
 import { Shield } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
-import { LoginForm } from "@/components/login-form";
+import { LoginForm } from "@/components/LoginForm";
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card";
+} from "@/components/ui/Card";
 
 const loginSchema = z.object({
   email: z.email("E-mail inválido."),
