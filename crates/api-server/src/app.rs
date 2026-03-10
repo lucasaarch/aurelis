@@ -11,6 +11,7 @@ use utoipa_scalar::{Scalar, Servable};
 
 use crate::config::Config;
 use crate::db::Database;
+use crate::grpc::auth::GrpcAuthServiceImpl;
 use crate::proto::auth::auth_service_server::AuthServiceServer;
 use crate::repositories::account::PgAccountRepository;
 use crate::repositories::character::PgCharacterRepository;
@@ -142,12 +143,12 @@ pub async fn run(config: Config) {
                 .add_service(
                     ReflectionBuilder::configure()
                         .register_encoded_file_descriptor_set(
-                            crate::proto::auth::FILE_DESCRIPTOR_SET,
+                            crate::proto::FILE_DESCRIPTOR_SET,
                         )
                         .build_v1()
                         .unwrap(),
                 )
-                .add_service(AuthServiceServer::new(state.auth_service.clone()))
+                .add_service(AuthServiceServer::new(GrpcAuthServiceImpl(state.auth_service.clone())))
                 .serve(addr.parse().unwrap())
                 .await
                 .expect("gRPC server error");

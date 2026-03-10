@@ -1,0 +1,41 @@
+syntax = "proto3";
+package character;
+
+service CharacterService {
+    rpc ListCharacters (ListCharactersRequest) returns (ListCharactersResponse);
+    rpc CreateCharacter (CreateCharacterRequest) returns (CreateCharacterResponse);
+}
+
+enum CharacterClass {
+    CHARACTER_CLASS_UNSPECIFIED = 0;
+    KAEL = 1;
+    RIN = 2;
+    SIRENA = 3;
+}
+
+message Character {
+    string id = 1;
+    string name = 2;
+    CharacterClass class = 3;
+    int32 level = 4;
+    string location = 5;
+    string created_at = 6;
+}
+
+message ListCharactersRequest {
+    string access_token = 1;
+}
+
+message ListCharactersResponse {
+    repeated Character characters = 1;
+}
+
+message CreateCharacterRequest {
+    string access_token = 1;
+    string name = 2;
+    CharacterClass class = 3;
+}
+
+message CreateCharacterResponse {
+    Character character = 1;
+}

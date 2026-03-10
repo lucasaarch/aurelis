@@ -48,6 +48,9 @@ pub enum AppError {
     #[error("Unauthorized")]
     Unauthorized,
 
+    #[error("Permission denied")]
+    PermissionDenied(String),
+
     #[error("Bad request: {0}")]
     BadRequest(String),
 
@@ -81,6 +84,11 @@ impl From<AppError> for ErrorResponse {
                 StatusCode::INTERNAL_SERVER_ERROR,
                 "INTERNAL_SERVER_ERROR",
                 "Internal server error",
+            ),
+            AppError::PermissionDenied(msg) => ErrorResponse::new(
+                StatusCode::FORBIDDEN,
+                "PERMISSION_DENIED",
+                &msg,
             ),
         }
     }

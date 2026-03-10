@@ -1,10 +1,7 @@
 use chrono::Utc;
 use shared::models::account::Account;
-use tonic::{Request, Response, Status};
 
 use crate::error::AppError;
-use crate::proto::auth::auth_service_server::AuthService as GrpcAuthService;
-use crate::proto::auth::{GameLoginRequest, GameLoginResponse, RefreshGameTokenRequest};
 use crate::repositories::account::{CreateAccountParams, PgAccountRepository};
 use crate::services::hash::HashService;
 use crate::services::jwt::{JwtService, TokenContext};
@@ -17,6 +14,12 @@ pub struct RegisterParams {
 pub struct LoginParams {
     pub email: String,
     pub password: String,
+    pub context: TokenContext
+}
+
+pub struct RefreshTokenParams {
+    pub refresh_token: String,
+    pub context: TokenContext
 }
 
 pub struct LoginResult {
@@ -56,8 +59,7 @@ impl AuthService {
             .map_err(Into::into)
     }
 
-    /// Web-specific login: always issues a token signed for the Web context.
-    pub async fn web_login(&self, params: LoginParams) -> Result<LoginResult, AppError> {
+    pub async fn login(&self, params: LoginParams) -> Result<LoginResult, AppError> {
         let (account, password_hash) = self
             .repository
             .find_by_email_with_hash(&params.email)
@@ -70,14 +72,18 @@ impl AuthService {
             return Err(AppError::Unauthorized);
         }
 
+        match params.context {
+            TokenContext::Game => self.check_if_can_perform_game_login(&account)?,
+            TokenContext::Web => (),
+        }
+
         let access_token = self
             .jwt_service
-            .sign_with_context(account.id, TokenContext::Web)?;
+            .sign_with_context(account.id, params.context)?;
 
-        // Create a refresh token using the refresh signing method.
         let refresh_token = self
             .jwt_service
-            .sign_refresh_with_context(account.id, TokenContext::Web)?;
+            .sign_refresh_with_context(account.id, params.context)?;
 
         Ok(LoginResult {
             access_token,
@@ -85,28 +91,30 @@ impl AuthService {
         })
     }
 
-    /// Refresh a web refresh token, returning a new access and refresh token pair.
-    pub async fn refresh_web_token(&self, refresh_token: &str) -> Result<LoginResult, AppError> {
-        // Verify refresh token using the Web context
+    pub async fn refresh_token(&self, params: RefreshTokenParams) -> Result<LoginResult, AppError> {
         let claims = self
             .jwt_service
-            .verify_refresh_with_context(refresh_token, TokenContext::Web)?;
+            .verify_refresh_with_context(&params.refresh_token, params.context)?;
 
-        // Ensure account still exists
         let account = self
             .repository
             .find_by_id(claims.sub)
             .await
             .map_err(|_| AppError::Unauthorized)?;
 
-        // Issue new tokens
+
+        match params.context {
+            TokenContext::Game => self.check_if_can_perform_game_login(&account)?,
+            TokenContext::Web => (),
+         }
+
         let access_token = self
             .jwt_service
-            .sign_with_context(account.id, TokenContext::Web)?;
+            .sign_with_context(account.id, params.context)?;
 
         let refresh_token = self
             .jwt_service
-            .sign_refresh_with_context(account.id, TokenContext::Web)?;
+            .sign_refresh_with_context(account.id, params.context)?;
 
         Ok(LoginResult {
             access_token,
@@ -114,8 +122,7 @@ impl AuthService {
         })
     }
 
-    fn check_game_login(&self, account: &Account) -> Result<(), Status> {
-        // Check permanent ban
+    fn check_if_can_perform_game_login(&self, account: &Account) -> Result<(), AppError> {
         if account.banned_at.is_some() {
             let reason = account
                 .banned_reason
@@ -123,13 +130,9 @@ impl AuthService {
                 .map(|s| s.as_str())
                 .unwrap_or("No reason provided");
 
-            return Err(Status::permission_denied(format!(
-                "Account banned: {}",
-                reason
-            )));
+            return Err(AppError::PermissionDenied(format!("Account permanently banned: {reason}")));
         }
 
-        // Check suspension
         if let Some(until) = account.suspended_until {
             let now = Utc::now().naive_utc();
             if until > now {
@@ -138,96 +141,12 @@ impl AuthService {
                 let hours = (secs % 86_400) / 3_600;
                 let minutes = (secs % 3_600) / 60;
 
-                return Err(Status::permission_denied(format!(
-                    "Account suspended for {} days, {} hours and {} minutes",
-                    days, hours, minutes
+                return Err(AppError::PermissionDenied(format!(
+                    "Account suspended for {days}d {hours}h {minutes}m"
                 )));
             }
         }
 
         Ok(())
-    }
-}
-
-#[tonic::async_trait]
-impl GrpcAuthService for AuthService {
-    async fn game_login(
-        &self,
-        request: Request<GameLoginRequest>,
-    ) -> Result<Response<GameLoginResponse>, Status> {
-        let req = request.into_inner();
-
-        let (account, password_hash) = self
-            .repository
-            .find_by_email_with_hash(&req.email)
-            .await
-            .map_err(|_| Status::unauthenticated("Invalid email or password"))?;
-
-        let valid = self
-            .hash_service
-            .verify(&req.password, &password_hash)
-            .map_err(|_| Status::unauthenticated("Invalid email or password"))?;
-
-        if !valid {
-            return Err(Status::unauthenticated("Invalid email or password"));
-        }
-
-        // Verify account status (ban/suspension)
-        self.check_game_login(&account)?;
-
-        let access_token = self
-            .jwt_service
-            .sign_with_context(account.id, TokenContext::Game)
-            .map_err(|_| Status::internal("Failed to generate token"))?;
-
-        // Produce a refresh token as well using refresh signing.
-        let refresh_token = self
-            .jwt_service
-            .sign_refresh_with_context(account.id, TokenContext::Game)
-            .map_err(|_| Status::internal("Failed to generate token"))?;
-
-        Ok(Response::new(GameLoginResponse {
-            access_token,
-            refresh_token,
-        }))
-    }
-
-    async fn refresh_game_token(
-        &self,
-        request: Request<RefreshGameTokenRequest>,
-    ) -> Result<Response<GameLoginResponse>, Status> {
-        let req = request.into_inner();
-
-        // Verify refresh token using the Game context
-        let claims = self
-            .jwt_service
-            .verify_refresh_with_context(&req.refresh_token, TokenContext::Game)
-            .map_err(|_| Status::unauthenticated("Invalid or expired refresh token"))?;
-
-        // Ensure account still exists
-        let account = self
-            .repository
-            .find_by_id(claims.sub)
-            .await
-            .map_err(|_| Status::unauthenticated("Account not found"))?;
-
-        // Verify account status (ban/suspension)
-        self.check_game_login(&account)?;
-
-        // Issue new tokens
-        let access_token = self
-            .jwt_service
-            .sign_with_context(account.id, TokenContext::Game)
-            .map_err(|_| Status::internal("Failed to generate access token"))?;
-
-        let refresh_token = self
-            .jwt_service
-            .sign_refresh_with_context(account.id, TokenContext::Game)
-            .map_err(|_| Status::internal("Failed to generate refresh token"))?;
-
-        Ok(Response::new(GameLoginResponse {
-            access_token,
-            refresh_token,
-        }))
     }
 }

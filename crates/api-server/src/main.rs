@@ -4,6 +4,7 @@ mod app;
 mod config;
 mod db;
 mod error;
+mod grpc;
 mod models;
 mod proto;
 mod repositories;

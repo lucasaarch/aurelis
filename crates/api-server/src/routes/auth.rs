@@ -12,7 +12,9 @@ use validator::{Validate, ValidationError};
 use crate::app::AppState;
 use crate::error::ErrorResponse;
 use crate::routes::middlewares::ValidatedBody;
+use crate::services::auth::RefreshTokenParams;
 use crate::services::auth::{LoginParams, RegisterParams};
+use crate::services::jwt::TokenContext;
 
 fn validate_strong_password(password: &str) -> Result<(), ValidationError> {
     let checks = [
@@ -121,9 +123,10 @@ pub async fn login(
 ) -> Result<Json<LoginResponse>, ErrorResponse> {
     let result = state
         .auth_service
-        .web_login(LoginParams {
+        .login(LoginParams {
             email: body.email,
             password: body.password,
+            context: TokenContext::Web,
         })
         .await?;
 
@@ -156,7 +159,10 @@ pub async fn refresh_web(
 ) -> Result<Json<LoginResponse>, ErrorResponse> {
     let result = state
         .auth_service
-        .refresh_web_token(&body.refresh_token)
+        .refresh_token(RefreshTokenParams {
+            refresh_token: body.refresh_token,
+            context: TokenContext::Web,
+        })
         .await?;
 
     Ok(Json(LoginResponse {
