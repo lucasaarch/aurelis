@@ -213,6 +213,7 @@ CREATE TABLE
 CREATE TABLE
     skills (
         id UUID PRIMARY KEY DEFAULT uuid_generate_v4 (),
+        slug VARCHAR(64) NOT NULL UNIQUE,
         name VARCHAR(64) NOT NULL,
         description TEXT,
         character_class character_class NOT NULL,
@@ -226,7 +227,6 @@ CREATE TABLE
     character_skills (
         character_id UUID NOT NULL REFERENCES characters (id) ON DELETE CASCADE,
         skill_id UUID NOT NULL REFERENCES skills (id),
-        current_level SMALLINT NOT NULL DEFAULT 1,
         unlocked_at TIMESTAMPTZ NOT NULL DEFAULT NOW (),
         PRIMARY KEY (character_id, skill_id)
     );
@@ -269,6 +269,38 @@ CREATE TABLE
         created_at TIMESTAMPTZ NOT NULL DEFAULT NOW ()
     );
 
+CREATE TYPE mob_type AS ENUM ('common', 'miniboss', 'boss', 'raidboss');
+
+CREATE TABLE
+    mobs (
+        id UUID PRIMARY KEY DEFAULT uuid_generate_v4 (),
+        slug VARCHAR(64) NOT NULL UNIQUE,
+        name VARCHAR(64) NOT NULL,
+        description TEXT,
+        mob_type mob_type NOT NULL,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW ()
+    );
+
+CREATE TABLE
+    dungeon_mobs (
+        id UUID PRIMARY KEY DEFAULT uuid_generate_v4 (),
+        mob_id UUID NOT NULL REFERENCES mobs (id) ON DELETE CASCADE,
+        dungeon_id VARCHAR(32) NOT NULL,
+        UNIQUE (mob_id, dungeon_id)
+    );
+
+CREATE TABLE
+    mob_drop_rates (
+        id UUID PRIMARY KEY DEFAULT uuid_generate_v4 (),
+        mob_id UUID NOT NULL REFERENCES mobs (id) ON DELETE CASCADE,
+        item_id UUID NOT NULL REFERENCES items (id) ON DELETE CASCADE,
+        drop_chance NUMERIC(5, 2) NOT NULL CHECK (
+            drop_chance > 0
+            AND drop_chance <= 100
+        ),
+        UNIQUE (mob_id, item_id)
+    );
+
 CREATE INDEX idx_characters_account_id ON characters (account_id);
 
 CREATE INDEX idx_inventory_character_id ON inventory (character_id);
@@ -298,3 +330,13 @@ CREATE INDEX idx_item_instances_character ON item_instances (owner_character_id)
 CREATE INDEX idx_item_instances_account ON item_instances (owner_account_id);
 
 CREATE INDEX idx_inventory_item_instance ON inventory (item_instance_id);
+
+CREATE INDEX idx_dungeon_mobs_dungeon ON dungeon_mobs (dungeon_id);
+
+CREATE INDEX idx_dungeon_mobs_mob ON dungeon_mobs (mob_id);
+
+CREATE INDEX idx_mob_drop_rates_mob ON mob_drop_rates (mob_id);
+
+CREATE INDEX idx_mob_drop_rates_item ON mob_drop_rates (item_id);
+
+CREATE INDEX idx_mobs_slug ON mobs (slug);
