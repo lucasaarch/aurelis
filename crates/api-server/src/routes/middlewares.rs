@@ -1,12 +1,15 @@
 use axum::{
     Json,
-    extract::{FromRequest, Query, Request},
-    http::StatusCode,
+    extract::{FromRequest, FromRequestParts, Query, Request},
+    http::{StatusCode, request::Parts},
     response::{IntoResponse, Response},
 };
 use serde::de::DeserializeOwned;
+use std::sync::Arc;
+use uuid::Uuid;
 use validator::{Validate, ValidationErrors};
 
+use crate::app::AppState;
 use crate::error::ErrorResponse;
 
 pub struct ValidatedBody<T>(pub T);
@@ -80,4 +83,37 @@ fn format_validation_errors(errors: &ValidationErrors) -> String {
         })
         .collect::<Vec<_>>()
         .join("; ")
+}
+
+pub struct AuthUser(pub Uuid);
+
+impl FromRequestParts<Arc<AppState>> for AuthUser {
+    type Rejection = Response;
+
+    async fn from_request_parts(parts: &mut Parts, state: &Arc<AppState>) -> Result<Self, Self::Rejection> {
+        let auth_header = parts
+            .headers
+            .get(axum::http::header::AUTHORIZATION)
+            .and_then(|v| v.to_str().ok())
+            .and_then(|v| v.strip_prefix("Bearer "));
+
+        let token = match auth_header {
+            Some(t) => t,
+            None => {
+                return Err(ErrorResponse::new(
+                    StatusCode::UNAUTHORIZED,
+                    "UNAUTHORIZED",
+                    "Missing or invalid Authorization header",
+                )
+                .into_response());
+            }
+        };
+
+        let claims = state.jwt_service.verify(token).map_err(|_| {
+            ErrorResponse::new(StatusCode::UNAUTHORIZED, "UNAUTHORIZED", "Invalid or expired token")
+                .into_response()
+        })?;
+
+        Ok(AuthUser(claims.sub))
+    }
 }
