@@ -12,11 +12,13 @@ use crate::repositories::account::PgAccountRepository;
 use crate::routes;
 use crate::services::account::AccountService;
 use crate::services::hash::HashService;
+use crate::services::jwt::JwtService;
 
 #[derive(OpenApi)]
 #[openapi(
     paths(
         routes::account::register,
+        routes::account::login,
     ),
     tags(
         (name = "Auth", description = "Authentication endpoints"),
@@ -33,10 +35,11 @@ pub struct AppState {
 }
 
 impl AppState {
-    fn new(db: Database) -> Self {
+    fn new(db: Database, config: &Config) -> Self {
         let hash_service = HashService::default();
+        let jwt_service = JwtService::new(&config.jwt.secret, config.jwt.expiration_seconds);
         let account_repository = PgAccountRepository::new(db);
-        let account_service = AccountService::new(account_repository, hash_service);
+        let account_service = AccountService::new(account_repository, hash_service, jwt_service);
 
         Self { account_service }
     }
@@ -44,7 +47,7 @@ impl AppState {
 
 pub async fn run(config: Config) {
     let db = Database::new(&config.database.url);
-    let state = Arc::new(AppState::new(db));
+    let state = Arc::new(AppState::new(db, &config));
 
     let app = Router::new()
         .merge(Scalar::with_url("/docs", ApiDoc::openapi()))

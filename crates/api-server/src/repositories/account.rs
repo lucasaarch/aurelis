@@ -42,6 +42,25 @@ impl PgAccountRepository {
         .await
     }
 
+    pub async fn find_by_email_with_hash(
+        &self,
+        email: &str,
+    ) -> Result<(Account, String), RepositoryError> {
+        let email = email.to_string();
+
+        self.run_blocking(move |conn| {
+            accounts::table
+                .filter(accounts::email.eq(email))
+                .first::<AccountModel>(conn)
+                .map(|ac| {
+                    let hash = ac.password_hash.clone();
+                    (ac.into(), hash)
+                })
+                .map_err(Into::into)
+        })
+        .await
+    }
+
     pub async fn find_by_username(&self, username: &str) -> Result<Account, RepositoryError> {
         let username = username.to_string();
 

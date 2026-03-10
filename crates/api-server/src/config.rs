@@ -17,9 +17,17 @@ pub struct ServerConfig {
 }
 
 #[derive(Debug, Clone)]
+pub struct JwtConfig {
+    pub secret: String,
+    pub expiration_seconds: u64,
+    pub refresh_expiration_seconds: u64,
+}
+
+#[derive(Debug, Clone)]
 pub struct Config {
     pub database: DatabaseConfig,
     pub server: ServerConfig,
+    pub jwt: JwtConfig,
 }
 
 impl Config {
@@ -32,6 +40,11 @@ impl Config {
             },
             server: ServerConfig {
                 port: env_var("API_SERVER_PORT", Some(8080))?,
+            },
+            jwt: JwtConfig {
+                secret: require_env_var("API_JWT_SECRET")?,
+                expiration_seconds: env_var("API_JWT_EXPIRATION_SECONDS", Some(86400))?,
+                refresh_expiration_seconds: env_var("API_JWT_REFRESH_EXPIRATION_SECONDS", Some(2592000))?,
             },
         };
 

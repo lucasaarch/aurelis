@@ -4,15 +4,16 @@ use axum::extract::State;
 use axum::http::StatusCode;
 use axum::routing::post;
 use axum::Router;
+use axum::Json;
 use regex::Regex;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 use validator::{Validate, ValidationError};
 
 use crate::app::AppState;
 use crate::error::ErrorResponse;
 use crate::routes::middlewares::ValidatedBody;
-use crate::services::account::RegisterParams;
+use crate::services::account::{LoginParams, RegisterParams};
 
 static USERNAME_REGEX: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"^[a-zA-Z0-9]([a-zA-Z0-9._]*[a-zA-Z0-9])?$").unwrap());
@@ -53,7 +54,9 @@ pub struct RegisterRequest {
 }
 
 pub fn router() -> Router<Arc<AppState>> {
-    Router::new().route("/account/register", post(register))
+    Router::new()
+        .route("/account/register", post(register))
+        .route("/account/login", post(login))
 }
 
 #[utoipa::path(
@@ -82,4 +85,43 @@ pub async fn register(
         .await?;
 
     Ok(StatusCode::CREATED)
+}
+
+#[derive(Deserialize, ToSchema, Validate)]
+pub struct LoginRequest {
+    #[validate(email(message = "must be a valid email address"))]
+    pub email: String,
+    pub password: String,
+}
+
+#[derive(Serialize, ToSchema)]
+pub struct LoginResponse {
+    pub token: String,
+}
+
+#[utoipa::path(
+    post,
+    path = "/account/login",
+    summary = "Login",
+    description = "Authenticates an account and returns a JWT token.",
+    request_body = LoginRequest,
+    responses(
+        (status = 200, description = "Login successful", body = LoginResponse),
+        (status = 401, description = "Invalid credentials", body = ErrorResponse),
+    ),
+    tag = "Auth",
+)]
+pub async fn login(
+    State(state): State<Arc<AppState>>,
+    ValidatedBody(body): ValidatedBody<LoginRequest>,
+) -> Result<Json<LoginResponse>, ErrorResponse> {
+    let result = state
+        .account_service
+        .login(LoginParams {
+            email: body.email,
+            password: body.password,
+        })
+        .await?;
+
+    Ok(Json(LoginResponse { token: result.token }))
 }

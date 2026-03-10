@@ -30,3 +30,4 @@ validator = { version = "0.20.0", features = ["derive"] }
 regex = "1"
 shared = { path = "../shared" }
 anyhow = "1.0.102"
+jsonwebtoken = "10.3.0"
