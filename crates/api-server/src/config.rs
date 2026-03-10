@@ -21,6 +21,8 @@ pub struct ServerConfig {
 pub struct JwtConfig {
     pub secret_web: String,
     pub secret_game: String,
+    pub refresh_secret_web: String,
+    pub refresh_secret_game: String,
     pub expiration_seconds: u64,
     pub refresh_expiration_seconds: u64,
 }
@@ -47,6 +49,8 @@ impl Config {
             jwt: JwtConfig {
                 secret_web: require_env_var("API_JWT_SECRET_WEB")?,
                 secret_game: require_env_var("API_JWT_SECRET_GAME")?,
+                refresh_secret_web: require_env_var("API_JWT_REFRESH_SECRET_WEB")?,
+                refresh_secret_game: require_env_var("API_JWT_REFRESH_SECRET_GAME")?,
                 expiration_seconds: env_var("API_JWT_EXPIRATION_SECONDS", Some(86400))?,
                 refresh_expiration_seconds: env_var(
                     "API_JWT_REFRESH_EXPIRATION_SECONDS",

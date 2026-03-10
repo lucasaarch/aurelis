@@ -35,6 +35,7 @@ jsonwebtoken = { version = "10.3.0", default-features = false, features = ["aws_
 tonic = "0.14.5"
 prost = "0.14.3"
 tonic-prost = "0.14.5"
+tonic-reflection = "0.14.5"
 
 [build-dependencies]
 tonic-prost-build = "0.14.5"

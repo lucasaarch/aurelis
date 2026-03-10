@@ -3,6 +3,7 @@ package auth;
 
 service AuthService {
     rpc GameLogin (GameLoginRequest) returns (GameLoginResponse);
+    rpc RefreshGameToken (RefreshGameTokenRequest) returns (GameLoginResponse);
 }
 
 message GameLoginRequest {
@@ -13,4 +14,8 @@ message GameLoginRequest {
 message GameLoginResponse {
     string access_token = 1;
     string refresh_token = 2;
+}
+
+message RefreshGameTokenRequest {
+    string refresh_token = 1;
 }

@@ -3,6 +3,7 @@ use std::sync::Arc;
 use axum::Router;
 use tokio::net::TcpListener;
 use tonic::transport::Server;
+use tonic_reflection::server::Builder as ReflectionBuilder;
 use tracing::info;
 use utoipa::openapi::security::{HttpAuthScheme, HttpBuilder, SecurityScheme};
 use utoipa::{Modify, OpenApi};
@@ -72,7 +73,10 @@ impl AppState {
         let jwt_service = JwtService::new(
             &config.jwt.secret_web,
             &config.jwt.secret_game,
+            &config.jwt.refresh_secret_web,
+            &config.jwt.refresh_secret_game,
             config.jwt.expiration_seconds,
+            config.jwt.refresh_expiration_seconds,
         );
         let account_repository = PgAccountRepository::new(db.clone());
         let account_service = AccountService::new(account_repository.clone());
@@ -132,9 +136,17 @@ pub async fn run(config: Config) {
         tokio::spawn(async move {
             let addr = format!("0.0.0.0:{}", port);
 
-            info!("gRPC server listeing on {addr}");
+            info!("gRPC server listening on {addr}");
 
             Server::builder()
+                .add_service(
+                    ReflectionBuilder::configure()
+                        .register_encoded_file_descriptor_set(
+                            crate::proto::auth::FILE_DESCRIPTOR_SET,
+                        )
+                        .build_v1()
+                        .unwrap(),
+                )
                 .add_service(AuthServiceServer::new(state.auth_service.clone()))
                 .serve(addr.parse().unwrap())
                 .await

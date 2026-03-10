@@ -60,6 +60,7 @@ pub fn router() -> Router<Arc<AppState>> {
     Router::new()
         .route("/auth/register", post(register))
         .route("/auth/login", post(login))
+        .route("/auth/refresh", post(refresh_web))
 }
 
 #[utoipa::path(
@@ -124,6 +125,38 @@ pub async fn login(
             email: body.email,
             password: body.password,
         })
+        .await?;
+
+    Ok(Json(LoginResponse {
+        access_token: result.access_token,
+        refresh_token: result.refresh_token,
+    }))
+}
+
+#[derive(Deserialize, ToSchema, Validate)]
+pub struct RefreshRequest {
+    pub refresh_token: String,
+}
+
+#[utoipa::path(
+    post,
+    path = "/auth/refresh",
+    summary = "Refresh Web token",
+    description = "Refreshes a Web access token using a refresh token.",
+    request_body = RefreshRequest,
+    responses(
+        (status = 200, description = "Refresh successful", body = LoginResponse),
+        (status = 401, description = "Invalid or expired refresh token", body = ErrorResponse),
+    ),
+    tag = "Auth",
+)]
+pub async fn refresh_web(
+    State(state): State<Arc<AppState>>,
+    ValidatedBody(body): ValidatedBody<RefreshRequest>,
+) -> Result<Json<LoginResponse>, ErrorResponse> {
+    let result = state
+        .auth_service
+        .refresh_web_token(&body.refresh_token)
         .await?;
 
     Ok(Json(LoginResponse {

@@ -17,17 +17,34 @@ pub struct JwtService {
     decoding_key_web: DecodingKey,
     encoding_key_game: EncodingKey,
     decoding_key_game: DecodingKey,
+    encoding_key_refresh_web: EncodingKey,
+    decoding_key_refresh_web: DecodingKey,
+    encoding_key_refresh_game: EncodingKey,
+    decoding_key_refresh_game: DecodingKey,
     expiration_seconds: u64,
+    refresh_expiration_seconds: u64,
 }
 
 impl JwtService {
-    pub fn new(secret_web: &str, secret_game: &str, expiration_seconds: u64) -> Self {
+    pub fn new(
+        secret_web: &str,
+        secret_game: &str,
+        refresh_secret_web: &str,
+        refresh_secret_game: &str,
+        expiration_seconds: u64,
+        refresh_expiration_seconds: u64,
+    ) -> Self {
         Self {
             encoding_key_web: EncodingKey::from_secret(secret_web.as_bytes()),
             decoding_key_web: DecodingKey::from_secret(secret_web.as_bytes()),
             encoding_key_game: EncodingKey::from_secret(secret_game.as_bytes()),
             decoding_key_game: DecodingKey::from_secret(secret_game.as_bytes()),
+            encoding_key_refresh_web: EncodingKey::from_secret(refresh_secret_web.as_bytes()),
+            decoding_key_refresh_web: DecodingKey::from_secret(refresh_secret_web.as_bytes()),
+            encoding_key_refresh_game: EncodingKey::from_secret(refresh_secret_game.as_bytes()),
+            decoding_key_refresh_game: DecodingKey::from_secret(refresh_secret_game.as_bytes()),
             expiration_seconds,
+            refresh_expiration_seconds,
         }
     }
 
@@ -53,6 +70,29 @@ impl JwtService {
         encode(&Header::default(), &claims, key).map_err(|e| AppError::Internal(anyhow::anyhow!(e)))
     }
 
+    /// Sign a refresh token using the refresh keys and expiration configured.
+    pub fn sign_refresh_with_context(
+        &self,
+        account_id: Uuid,
+        context: TokenContext,
+    ) -> Result<String, AppError> {
+        let now = jsonwebtoken::get_current_timestamp();
+        let iat = now;
+        let exp = now + self.refresh_expiration_seconds;
+        let claims = Claims {
+            sub: account_id,
+            exp,
+            iat,
+        };
+
+        let key = match context {
+            TokenContext::Web => &self.encoding_key_refresh_web,
+            TokenContext::Game => &self.encoding_key_refresh_game,
+        };
+
+        encode(&Header::default(), &claims, key).map_err(|e| AppError::Internal(anyhow::anyhow!(e)))
+    }
+
     pub fn verify_with_context(
         &self,
         token: &str,
@@ -61,6 +101,25 @@ impl JwtService {
         let key: &DecodingKey = match context {
             TokenContext::Web => &self.decoding_key_web,
             TokenContext::Game => &self.decoding_key_game,
+        };
+
+        decode::<Claims>(token, key, &Validation::default())
+            .map(|data| data.claims)
+            .map_err(|e| match e.kind() {
+                jsonwebtoken::errors::ErrorKind::ExpiredSignature => AppError::Unauthorized,
+                _ => AppError::Unauthorized,
+            })
+    }
+
+    /// Verify a refresh token against the refresh keys for the given context.
+    pub fn verify_refresh_with_context(
+        &self,
+        token: &str,
+        context: TokenContext,
+    ) -> Result<Claims, AppError> {
+        let key: &DecodingKey = match context {
+            TokenContext::Web => &self.decoding_key_refresh_web,
+            TokenContext::Game => &self.decoding_key_refresh_game,
         };
 
         decode::<Claims>(token, key, &Validation::default())

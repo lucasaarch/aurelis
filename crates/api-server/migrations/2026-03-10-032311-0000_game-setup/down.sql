@@ -16,8 +16,6 @@ DROP INDEX IF EXISTS idx_dungeon_history_char;
 
 DROP INDEX IF EXISTS idx_character_quests_char;
 
-DROP INDEX IF EXISTS idx_refresh_tokens_account;
-
 DROP INDEX IF EXISTS idx_inventory_item_instance;
 
 DROP INDEX IF EXISTS idx_item_instances_account;
@@ -61,8 +59,6 @@ DROP TABLE IF EXISTS inventory;
 DROP TABLE IF EXISTS items;
 
 DROP TABLE IF EXISTS characters;
-
-DROP TABLE IF EXISTS refresh_tokens;
 
 DROP TABLE IF EXISTS accounts;
 

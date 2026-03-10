@@ -29,17 +29,6 @@ CREATE TABLE
         deleted_at TIMESTAMPTZ
     );
 
-CREATE TABLE
-    refresh_tokens (
-        id UUID PRIMARY KEY DEFAULT uuid_generate_v4 (),
-        account_id UUID NOT NULL REFERENCES accounts (id) ON DELETE CASCADE,
-        token_hash VARCHAR(255) NOT NULL UNIQUE,
-        expires_at TIMESTAMPTZ NOT NULL,
-        revoked BOOLEAN NOT NULL DEFAULT FALSE,
-        revoked_at TIMESTAMPTZ,
-        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW ()
-    );
-
 CREATE TYPE character_class AS ENUM ('kael', 'rin', 'sirena');
 
 CREATE TYPE character_location AS ENUM ('aurelis', 'volcanis', 'aquavale', 'sylvandar');
@@ -306,8 +295,6 @@ CREATE TABLE
 CREATE INDEX idx_characters_account_id ON characters (account_id);
 
 CREATE INDEX idx_inventory_character_id ON inventory (character_id);
-
-CREATE INDEX idx_refresh_tokens_account ON refresh_tokens (account_id);
 
 CREATE INDEX idx_character_quests_char ON character_quests (character_id);
 
