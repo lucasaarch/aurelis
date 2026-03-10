@@ -21,6 +21,9 @@ use crate::services::hash::HashService;
     tags(
         (name = "Auth", description = "Authentication endpoints"),
     ),
+    info(
+        title = "Resona API"
+    )
 )]
 struct ApiDoc;
 

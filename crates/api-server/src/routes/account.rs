@@ -25,6 +25,8 @@ pub fn router() -> Router<Arc<AppState>> {
 #[utoipa::path(
     post,
     path = "/auth/register",
+    summary = "Register a new account",
+    description = "Creates a new player account. Returns 409 if the email or username is already in use.",
     request_body = RegisterRequest,
     responses(
         (status = 201, description = "Account created"),
