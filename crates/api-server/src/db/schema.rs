@@ -325,19 +325,6 @@ diesel::table! {
 }
 
 diesel::table! {
-    refresh_tokens (id) {
-        id -> Uuid,
-        account_id -> Uuid,
-        #[max_length = 255]
-        token_hash -> Varchar,
-        expires_at -> Timestamptz,
-        revoked -> Bool,
-        revoked_at -> Nullable<Timestamptz>,
-        created_at -> Timestamptz,
-    }
-}
-
-diesel::table! {
     use diesel::sql_types::*;
     use super::sql_types::CharacterClass;
 
@@ -382,7 +369,6 @@ diesel::joinable!(item_instances -> characters (owner_character_id));
 diesel::joinable!(item_instances -> items (item_id));
 diesel::joinable!(mob_drop_rates -> items (item_id));
 diesel::joinable!(mob_drop_rates -> mobs (mob_id));
-diesel::joinable!(refresh_tokens -> accounts (account_id));
 diesel::joinable!(skills -> evolution_lines (line_id));
 
 diesel::allow_tables_to_appear_in_same_query!(
@@ -406,6 +392,5 @@ diesel::allow_tables_to_appear_in_same_query!(
     mob_drop_rates,
     mobs,
     quests,
-    refresh_tokens,
     skills,
 );
