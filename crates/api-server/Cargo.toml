@@ -24,6 +24,7 @@ tokio = { version = "1.50.0", features = ["full"] }
 tracing = "0.1.44"
 tracing-subscriber = { version = "0.3.22", features = ["env-filter", "json"] }
 utoipa = { version = "5.4.0", features = ["axum_extras"] }
+utoipa-scalar = { version = "0.3.0", features = ["axum"] }
 uuid = { version = "1.22.0", features = ["v4", "serde"] }
 validator = { version = "0.20.0", features = ["derive"] }
 shared = { path = "../shared" }

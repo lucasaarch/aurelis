@@ -25,14 +25,6 @@ impl AccountService {
     }
 
     pub async fn register(&self, params: RegisterParams) -> Result<Account, AppError> {
-        if let Ok(_) = self.repository.find_by_email(&params.email).await {
-            return Err(AppError::Conflict("Email already exists".to_string()));
-        }
-
-        if let Ok(_) = self.repository.find_by_username(&params.username).await {
-            return Err(AppError::Conflict("Username already exists".to_string()));
-        }
-        
         let password_hash = self.hash_service.hash(&params.password)?;
 
         self.repository

@@ -3,6 +3,8 @@ use std::sync::Arc;
 use axum::Router;
 use tokio::net::TcpListener;
 use tracing::info;
+use utoipa::OpenApi;
+use utoipa_scalar::{Scalar, Servable};
 
 use crate::config::Config;
 use crate::db::Database;
@@ -10,6 +12,17 @@ use crate::repositories::account::PgAccountRepository;
 use crate::routes;
 use crate::services::account::AccountService;
 use crate::services::hash::HashService;
+
+#[derive(OpenApi)]
+#[openapi(
+    paths(
+        routes::account::register,
+    ),
+    tags(
+        (name = "Auth", description = "Authentication endpoints"),
+    ),
+)]
+struct ApiDoc;
 
 #[derive(Clone)]
 pub struct AppState {
@@ -31,6 +44,7 @@ pub async fn run(config: Config) {
     let state = Arc::new(AppState::new(db));
 
     let app = Router::new()
+        .merge(Scalar::with_url("/docs", ApiDoc::openapi()))
         .merge(routes::account::router())
         .with_state(state);
 
@@ -38,6 +52,7 @@ pub async fn run(config: Config) {
     let listener = TcpListener::bind(&addr).await.expect("Failed to bind address");
 
     info!("Server listening on {addr}");
+    info!("API docs available at http://{addr}/docs");
 
     axum::serve(listener, app)
         .await

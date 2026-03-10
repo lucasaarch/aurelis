@@ -1,10 +1,24 @@
 use axum::Json;
 use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
-use serde_json::json;
+use serde::Serialize;
 use thiserror::Error;
+use utoipa::ToSchema;
 
 use crate::repositories::RepositoryError;
+
+#[derive(Debug, Serialize, ToSchema)]
+pub struct ErrorResponse {
+    pub error: String,
+}
+
+impl ErrorResponse {
+    fn new(message: impl Into<String>) -> Json<Self> {
+        Json(Self {
+            error: message.into(),
+        })
+    }
+}
 
 #[derive(Debug, Error)]
 pub enum AppError {
@@ -37,7 +51,7 @@ impl IntoResponse for AppError {
             ),
         };
 
-        (status, Json(json!({ "error": message }))).into_response()
+        (status, ErrorResponse::new(message)).into_response()
     }
 }
 

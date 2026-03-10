@@ -1,0 +1,11 @@
+[pre]
+enabled = true
+identifier = "alpha"
+
+[pre.base_versions]
+admin-panel = "0.1.0"
+api-server = "0.1.0"
+city-service = "0.1.0"
+client = "0.1.0"
+dungeon-service = "0.1.0"
+shared = "0.1.0"

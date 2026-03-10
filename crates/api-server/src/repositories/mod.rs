@@ -27,7 +27,13 @@ impl From<diesel::result::Error> for RepositoryError {
             diesel::result::Error::DatabaseError(
                 diesel::result::DatabaseErrorKind::UniqueViolation,
                 info,
-            ) => RepositoryError::Conflict(info.message().to_string()),
+            ) => {
+                let field = info
+                    .constraint_name()
+                    .and_then(|c| c.splitn(3, '_').nth(1))
+                    .unwrap_or("field");
+                RepositoryError::Conflict(format!("{field} already in use"))
+            }
             diesel::result::Error::DatabaseError(_, info) => {
                 RepositoryError::Database(info.message().to_string())
             }
