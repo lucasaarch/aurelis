@@ -3,13 +3,22 @@ use serde::{Deserialize,Serialize};
 use uuid::Uuid;
 
 #[derive(Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct Account {
     pub id: Uuid,
     pub username: String,
     pub email: String,
-    pub is_banned: bool,
+    pub max_characters: i16,
+    pub shared_storage_enabled: bool,
+    pub shared_storage_capacity: i16,
+    pub cash: i64,
+    pub stored_credits: i64,
+    pub email_verified: bool,
     pub banned_at: Option<NaiveDateTime>,
     pub banned_reason: Option<String>,
+    pub suspended_until: Option<NaiveDateTime>,
+    pub chat_restricted_until: Option<NaiveDateTime>,
     pub created_at: NaiveDateTime,
     pub updated_at: NaiveDateTime,
+    pub deleted_at: Option<NaiveDateTime>,
 }

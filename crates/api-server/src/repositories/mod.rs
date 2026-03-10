@@ -4,6 +4,7 @@ use thiserror::Error;
 use crate::db::Database;
 
 pub mod account;
+pub mod character;
 
 #[derive(Debug, Error)]
 pub enum RepositoryError {

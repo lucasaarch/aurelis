@@ -10,11 +10,25 @@ pub struct AccountModel {
     pub username: String,
     pub email: String,
     pub password_hash: String,
-    pub is_banned: bool,
+    pub max_characters: i16,
+    pub shared_storage_enabled: bool,
+    pub shared_storage_capacity: i16,
+    pub cash: i64,
+    pub stored_credits: i64,
+    pub email_verified: bool,
+    pub email_verify_token: Option<String>,
+    pub email_verify_token_expires: Option<NaiveDateTime>,
+    pub password_reset_token: Option<String>,
+    pub password_reset_expires: Option<NaiveDateTime>,
     pub banned_at: Option<NaiveDateTime>,
     pub banned_reason: Option<String>,
+    pub suspended_until: Option<NaiveDateTime>,
+    pub chat_restricted_until: Option<NaiveDateTime>,
+    pub last_login_at: Option<NaiveDateTime>,
+    pub last_login_ip: Option<String>,
     pub created_at: NaiveDateTime,
     pub updated_at: NaiveDateTime,
+    pub deleted_at: Option<NaiveDateTime>,
 }
 
 impl AccountModel {
@@ -25,25 +39,47 @@ impl AccountModel {
             username,
             email,
             password_hash,
-            is_banned: false,
+            max_characters: 3,
+            shared_storage_enabled: false,
+            shared_storage_capacity: 20,
+            cash: 0,
+            stored_credits: 0,
+            email_verified: false,
+            email_verify_token: None,
+            email_verify_token_expires: None,
+            password_reset_token: None,
+            password_reset_expires: None,
             banned_at: None,
             banned_reason: None,
+            suspended_until: None,
+            chat_restricted_until: None,
+            last_login_at: None,
+            last_login_ip: None,
             created_at: now,
             updated_at: now,
+            deleted_at: None
         }
     }
 
     pub fn ban(&mut self, reason: String) {
-        self.is_banned = true;
         self.banned_at = Some(Utc::now().naive_utc());
         self.banned_reason = Some(reason);
         self.updated_at = Utc::now().naive_utc();
     }
 
     pub fn unban(&mut self) {
-        self.is_banned = false;
         self.banned_at = None;
         self.banned_reason = None;
+        self.updated_at = Utc::now().naive_utc();
+    }
+
+    pub fn suspend(&mut self, until: NaiveDateTime) {
+        self.suspended_until = Some(until);
+        self.updated_at = Utc::now().naive_utc();
+    }
+
+    pub fn unsuspend(&mut self) {
+        self.suspended_until = None;
         self.updated_at = Utc::now().naive_utc();
     }
 
@@ -56,6 +92,11 @@ impl AccountModel {
         self.password_hash = new_password_hash;
         self.updated_at = Utc::now().naive_utc();
     }
+
+    pub fn verify_email(&mut self) {
+        self.email_verified = true;
+        self.updated_at = Utc::now().naive_utc();
+    }
 }
 
 impl From<AccountModel> for Account {
@@ -64,11 +105,19 @@ impl From<AccountModel> for Account {
             id: model.id,
             username: model.username,
             email: model.email,
-            is_banned: model.is_banned,
+            max_characters: model.max_characters,
+            shared_storage_enabled: model.shared_storage_enabled,
+            shared_storage_capacity: model.shared_storage_capacity,
+            cash: model.cash,
+            stored_credits: model.stored_credits,
+            email_verified: model.email_verified,
             banned_at: model.banned_at,
             banned_reason: model.banned_reason,
+            suspended_until: model.suspended_until,
+            chat_restricted_until: model.chat_restricted_until,
             created_at: model.created_at,
             updated_at: model.updated_at,
+            deleted_at: model.deleted_at,
         }
     }
 }

@@ -1,1 +1,0 @@
-ALTER TABLE accounts ADD COLUMN region VARCHAR(16) NOT NULL DEFAULT 'america';
