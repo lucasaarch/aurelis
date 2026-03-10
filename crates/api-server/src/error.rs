@@ -4,6 +4,7 @@ use axum::response::{IntoResponse, Response};
 use chrono::Utc;
 use serde::Serialize;
 use thiserror::Error;
+use tonic::Status;
 use utoipa::ToSchema;
 
 use crate::repositories::RepositoryError;
@@ -56,6 +57,19 @@ pub enum AppError {
 
     #[error("Internal server error")]
     Internal(#[from] anyhow::Error),
+}
+
+impl From<AppError> for Status {
+    fn from(err: AppError) -> Self {
+        match err {
+            AppError::NotFound => Status::not_found("Not found"),
+            AppError::Conflict(msg) => Status::already_exists(msg),
+            AppError::Unauthorized => Status::unauthenticated("Unauthorized"),
+            AppError::PermissionDenied(msg) => Status::permission_denied(msg),
+            AppError::BadRequest(msg) => Status::invalid_argument(msg),
+            AppError::Internal(_) => Status::internal("Internal server error"),
+        }
+    }
 }
 
 impl From<AppError> for ErrorResponse {

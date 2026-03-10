@@ -24,8 +24,7 @@ impl GrpcAuthService for GrpcAuthServiceImpl {
         let result = self
             .0
             .login(params)
-            .await
-            .map_err(|err| Status::unauthenticated(err.to_string()))?;
+            .await?;
 
         Ok(Response::new(GameLoginResponse {
             access_token: result.access_token,
@@ -47,8 +46,7 @@ impl GrpcAuthService for GrpcAuthServiceImpl {
         let result = self
             .0
             .refresh_token(params)
-            .await
-            .map_err(|err| Status::unauthenticated(err.to_string()))?;
+            .await?;
 
         Ok(Response::new(GameLoginResponse {
             access_token: result.access_token,
