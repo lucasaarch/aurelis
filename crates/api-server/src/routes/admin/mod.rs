@@ -1,6 +1,5 @@
 pub mod mob;
 pub mod item;
-pub mod give_item;
 pub mod mob_drop_rate;
 
 use axum::Router;
@@ -11,5 +10,4 @@ pub fn router() -> Router<Arc<crate::app::AppState>> {
         .merge(mob::router())
         .merge(item::router())
         .merge(mob_drop_rate::router())
-        .merge(give_item::router())
 }

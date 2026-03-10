@@ -51,7 +51,7 @@ impl Modify for SecurityAddon {
     paths(
         routes::admin::mob::create_mob,
         routes::admin::mob_drop_rate::create_mob_drop_rate,
-        routes::admin::give_item::give_item,
+        routes::admin::item::give_item,
         routes::admin::item::create_item,
         routes::auth::register,
         routes::auth::login,
