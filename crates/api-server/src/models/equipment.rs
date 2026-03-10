@@ -10,16 +10,16 @@ use crate::models::equipment_slot::EquipmentSlotModel;
 pub struct EquipmentModel {
     pub character_id: Uuid,
     pub slot: EquipmentSlotModel,
-    pub inventory_id: Uuid,
+    pub item_instance_id: Uuid,
     pub equipped_at: NaiveDateTime,
 }
 
 impl EquipmentModel {
-    pub fn new(character_id: Uuid, slot: EquipmentSlotModel, inventory_id: Uuid) -> Self {
+    pub fn new(character_id: Uuid, slot: EquipmentSlotModel, item_instance_id: Uuid) -> Self {
         Self {
             character_id,
             slot,
-            inventory_id,
+            item_instance_id,
             equipped_at: Utc::now().naive_utc(),
         }
     }
@@ -30,7 +30,7 @@ impl From<EquipmentModel> for Equipment {
         Self {
             character_id: model.character_id,
             slot: model.slot.into(),
-            inventory_id: model.inventory_id,
+            item_instance_id: model.item_instance_id,
             equipped_at: model.equipped_at,
         }
     }

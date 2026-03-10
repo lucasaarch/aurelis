@@ -8,6 +8,8 @@ pub mod currency_transaction;
 pub mod inventory;
 pub mod inventory_type;
 pub mod item;
+pub mod item_instance;
+pub mod item_instance_gem;
 pub mod item_rarity;
 pub mod equipment;
 pub mod equipment_slot;

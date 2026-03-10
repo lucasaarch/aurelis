@@ -48,10 +48,6 @@ impl CharacterModel {
             updated_at: now,
         }
     }
-
-    pub fn can_equip(&self, item_level_req: i16) -> bool {
-        self.level >= item_level_req
-    }
 }
 
 impl From<CharacterModel> for Character {

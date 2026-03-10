@@ -14,8 +14,8 @@ pub mod sql_types {
     pub struct CurrencyOrigin;
 
     #[derive(diesel::query_builder::QueryId, Clone, diesel::sql_types::SqlType)]
-    #[diesel(postgres_type(name = "equipment_slot"))]
-    pub struct EquipmentSlot;
+    #[diesel(postgres_type(name = "equipment_slot_type"))]
+    pub struct EquipmentSlotType;
 
     #[derive(diesel::query_builder::QueryId, Clone, diesel::sql_types::SqlType)]
     #[diesel(postgres_type(name = "inventory_type"))]
@@ -68,7 +68,7 @@ diesel::table! {
     character_consumable_slots (character_id, slot) {
         character_id -> Uuid,
         slot -> Int2,
-        inventory_id -> Nullable<Uuid>,
+        item_instance_id -> Nullable<Uuid>,
     }
 }
 
@@ -171,12 +171,12 @@ diesel::table! {
 
 diesel::table! {
     use diesel::sql_types::*;
-    use super::sql_types::EquipmentSlot;
+    use super::sql_types::EquipmentSlotType;
 
     equipment (character_id, slot) {
         character_id -> Uuid,
-        slot -> EquipmentSlot,
-        inventory_id -> Uuid,
+        slot -> EquipmentSlotType,
+        item_instance_id -> Uuid,
         equipped_at -> Timestamptz,
     }
 }
@@ -216,7 +216,8 @@ diesel::table! {
     inventory (id) {
         id -> Uuid,
         character_id -> Uuid,
-        item_id -> Uuid,
+        item_instance_id -> Nullable<Uuid>,
+        item_id -> Nullable<Uuid>,
         inventory_type -> InventoryType,
         slot_index -> Int2,
         quantity -> Int2,
@@ -225,9 +226,35 @@ diesel::table! {
 }
 
 diesel::table! {
+    item_instance_gems (id) {
+        id -> Uuid,
+        item_instance_id -> Uuid,
+        slot_index -> Int2,
+        gem_instance_id -> Uuid,
+        socketed_at -> Timestamptz,
+    }
+}
+
+diesel::table! {
+    item_instances (id) {
+        id -> Uuid,
+        item_id -> Uuid,
+        refinement -> Int2,
+        gem_slots -> Int2,
+        attributes -> Jsonb,
+        owner_character_id -> Nullable<Uuid>,
+        owner_account_id -> Nullable<Uuid>,
+        in_shared_storage -> Bool,
+        in_trade -> Bool,
+        created_at -> Timestamptz,
+        updated_at -> Timestamptz,
+    }
+}
+
+diesel::table! {
     use diesel::sql_types::*;
     use super::sql_types::ItemRarity;
-    use super::sql_types::EquipmentSlot;
+    use super::sql_types::EquipmentSlotType;
     use super::sql_types::CharacterClass;
 
     items (id) {
@@ -236,7 +263,7 @@ diesel::table! {
         name -> Varchar,
         description -> Nullable<Text>,
         rarity -> ItemRarity,
-        equipment_slot -> Nullable<EquipmentSlot>,
+        equipment_slot -> Nullable<EquipmentSlotType>,
         class -> Nullable<CharacterClass>,
         level_req -> Int2,
         stats -> Jsonb,
@@ -290,7 +317,7 @@ diesel::table! {
 }
 
 diesel::joinable!(character_consumable_slots -> characters (character_id));
-diesel::joinable!(character_consumable_slots -> inventory (inventory_id));
+diesel::joinable!(character_consumable_slots -> item_instances (item_instance_id));
 diesel::joinable!(character_evolution -> characters (character_id));
 diesel::joinable!(character_evolution -> evolution_lines (line_id));
 diesel::joinable!(character_quests -> characters (character_id));
@@ -304,10 +331,14 @@ diesel::joinable!(currency_transactions -> accounts (account_id));
 diesel::joinable!(currency_transactions -> characters (character_id));
 diesel::joinable!(dungeon_history -> characters (character_id));
 diesel::joinable!(equipment -> characters (character_id));
-diesel::joinable!(equipment -> inventory (inventory_id));
+diesel::joinable!(equipment -> item_instances (item_instance_id));
 diesel::joinable!(evolution_steps -> evolution_lines (line_id));
 diesel::joinable!(inventory -> characters (character_id));
+diesel::joinable!(inventory -> item_instances (item_instance_id));
 diesel::joinable!(inventory -> items (item_id));
+diesel::joinable!(item_instances -> accounts (owner_account_id));
+diesel::joinable!(item_instances -> characters (owner_character_id));
+diesel::joinable!(item_instances -> items (item_id));
 diesel::joinable!(refresh_tokens -> accounts (account_id));
 diesel::joinable!(skills -> evolution_lines (line_id));
 
@@ -325,6 +356,8 @@ diesel::allow_tables_to_appear_in_same_query!(
     evolution_lines,
     evolution_steps,
     inventory,
+    item_instance_gems,
+    item_instances,
     items,
     quests,
     refresh_tokens,

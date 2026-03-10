@@ -6,7 +6,7 @@ use shared::models::equipment_slot::EquipmentSlot;
 use std::io::Write;
 
 #[derive(Debug, AsExpression, FromSqlRow)]
-#[diesel(sql_type = crate::db::schema::sql_types::EquipmentSlot)]
+#[diesel(sql_type = crate::db::schema::sql_types::EquipmentSlotType)]
 pub enum EquipmentSlotModel {
     Weapon,
     Head,
@@ -15,7 +15,7 @@ pub enum EquipmentSlotModel {
     Accessory,
 }
 
-impl ToSql<crate::db::schema::sql_types::EquipmentSlot, Pg> for EquipmentSlotModel {
+impl ToSql<crate::db::schema::sql_types::EquipmentSlotType, Pg> for EquipmentSlotModel {
     fn to_sql<'b>(&'b self, out: &mut Output<'b, '_, Pg>) -> serialize::Result {
         match self {
             EquipmentSlotModel::Weapon => out.write_all(b"weapon")?,
@@ -28,7 +28,7 @@ impl ToSql<crate::db::schema::sql_types::EquipmentSlot, Pg> for EquipmentSlotMod
     }
 }
 
-impl FromSql<crate::db::schema::sql_types::EquipmentSlot, Pg> for EquipmentSlotModel {
+impl FromSql<crate::db::schema::sql_types::EquipmentSlotType, Pg> for EquipmentSlotModel {
     fn from_sql(bytes: PgValue) -> deserialize::Result<Self> {
         match bytes.as_bytes() {
             b"weapon" => Ok(EquipmentSlotModel::Weapon),

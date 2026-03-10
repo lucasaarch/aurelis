@@ -2,13 +2,12 @@ use chrono::NaiveDateTime;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use crate::models::equipment_slot::EquipmentSlot;
-
 #[derive(Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct Equipment {
-    pub character_id: Uuid,
-    pub slot: EquipmentSlot,
+pub struct ItemInstanceGem {
+    pub id: Uuid,
     pub item_instance_id: Uuid,
-    pub equipped_at: NaiveDateTime,
+    pub slot_index: i16,
+    pub gem_instance_id: Uuid,
+    pub socketed_at: NaiveDateTime,
 }
