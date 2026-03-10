@@ -28,10 +28,10 @@ impl Config {
 
         let config = Config {
             database: DatabaseConfig {
-                url: require_env_var("DATABASE_URL")?,
+                url: require_env_var("API_DATABASE_URL")?,
             },
             server: ServerConfig {
-                port: env_var("SERVER_PORT", Some(8080))?,
+                port: env_var("API_SERVER_PORT", Some(8080))?,
             },
         };
 
