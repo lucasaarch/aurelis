@@ -1,0 +1,4 @@
+DROP INDEX IF EXISTS idx_items_slug;
+
+ALTER TABLE items
+    DROP COLUMN IF EXISTS slug;

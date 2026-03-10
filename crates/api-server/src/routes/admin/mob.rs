@@ -3,19 +3,24 @@ use axum::http::StatusCode;
 use axum::routing::post;
 use axum::{Json, Router};
 use serde::{Deserialize, Serialize};
+use validator::Validate;
 use std::sync::Arc;
 use utoipa::ToSchema;
 
 use crate::app::AppState;
 use crate::error::ErrorResponse;
-use crate::routes::middlewares::AuthUser;
+use crate::routes::middlewares::{AuthUser, ValidatedBody};
 use crate::services::mob::CreateMobInput;
+use crate::utils::validation::validate_mob_type;
 
-#[derive(Deserialize, ToSchema)]
+#[derive(Deserialize, ToSchema, Validate)]
 pub struct CreateMobRequest {
-    pub slug: String,
+    #[validate(length(min = 1, max = 64))]
     pub name: String,
+
     pub description: Option<String>,
+
+    #[validate(custom(function = validate_mob_type))]
     pub mob_type: String,
 }
 
@@ -45,14 +50,13 @@ pub fn router() -> Router<Arc<AppState>> {
 pub async fn create_mob(
     State(state): State<Arc<AppState>>,
     AuthUser(admin_id): AuthUser,
-    Json(body): Json<CreateMobRequest>,
+    ValidatedBody(body): ValidatedBody<CreateMobRequest>,
 ) -> Result<(StatusCode, Json<CreateMobResponse>), ErrorResponse> {
     let created = state
         .mob_service
         .create(
             admin_id,
             CreateMobInput {
-                slug: body.slug,
                 name: body.name,
                 description: body.description,
                 mob_type: body.mob_type,

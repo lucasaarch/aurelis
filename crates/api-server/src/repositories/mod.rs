@@ -6,6 +6,7 @@ use crate::db::Database;
 pub mod account;
 pub mod character;
 pub mod mob;
+pub mod item;
 
 #[derive(Debug, Error)]
 pub enum RepositoryError {

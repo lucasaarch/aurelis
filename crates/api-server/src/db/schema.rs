@@ -281,6 +281,8 @@ diesel::table! {
         level_req -> Int2,
         stats -> Jsonb,
         created_at -> Timestamptz,
+        #[max_length = 64]
+        slug -> Varchar,
     }
 }
 

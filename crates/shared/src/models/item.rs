@@ -9,6 +9,7 @@ use crate::models::{character_class::CharacterClass, equipment_slot::EquipmentSl
 #[serde(rename_all = "camelCase")]
 pub struct Item {
     pub id: Uuid,
+    pub slug: String,
     pub name: String,
     pub class: Option<CharacterClass>,
     pub description: Option<String>,

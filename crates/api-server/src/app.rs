@@ -16,6 +16,7 @@ use crate::proto::auth::auth_service_server::AuthServiceServer;
 use crate::repositories::account::PgAccountRepository;
 use crate::repositories::character::PgCharacterRepository;
 use crate::repositories::mob::PgMobRepository;
+use crate::repositories::item::PgItemRepository;
 use crate::routes;
 use crate::services::account::AccountService;
 use crate::services::auth::AuthService;
@@ -23,6 +24,7 @@ use crate::services::character::CharacterService;
 use crate::services::hash::HashService;
 use crate::services::jwt::JwtService;
 use crate::services::mob::MobService;
+use crate::services::item::ItemService;
 
 struct SecurityAddon;
 
@@ -43,12 +45,15 @@ impl Modify for SecurityAddon {
 #[derive(OpenApi)]
 #[openapi(
     paths(
+        routes::admin::mob::create_mob,
+        routes::admin::item::create_item,
         routes::auth::register,
         routes::auth::login,
         routes::character::create_character,
         routes::character::list_characters,
     ),
     tags(
+        (name = "Admin", description = "Admin-only endpoints"),
         (name = "Auth", description = "Authentication endpoints"),
         (name = "Character", description = "Character management"),
     ),
@@ -66,6 +71,7 @@ pub struct AppState {
     pub character_service: CharacterService,
     pub mob_service: MobService,
     pub jwt_service: JwtService,
+    pub item_service: ItemService,
 }
 
 impl AppState {
@@ -91,6 +97,8 @@ impl AppState {
             CharacterService::new(character_repository, account_repository.clone());
         let mob_repository = PgMobRepository::new(db.clone());
         let mob_service = MobService::new(mob_repository, account_repository.clone());
+        let item_repository = PgItemRepository::new(db.clone());
+        let item_service = ItemService::new(item_repository, account_repository.clone());
 
         Self {
             account_service,
@@ -98,6 +106,7 @@ impl AppState {
             character_service,
             mob_service,
             jwt_service,
+            item_service,
         }
     }
 }
