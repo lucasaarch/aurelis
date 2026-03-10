@@ -34,17 +34,27 @@ impl CharacterService {
     ) -> Result<Character, AppError> {
         let account = match self.account_repository.find_by_id(account_id).await {
             Ok(a) => a,
-            Err(_) => return Err(AppError::NotFound),
+            Err(_) => {
+                return Err(AppError::Unauthorized(
+                    "Unable to fetch account data".to_string(),
+                ));
+            }
         };
 
         let max = account.max_characters as i64;
         let current = match self.character_repository.count_by_account(account_id).await {
             Ok(c) => c,
-            Err(_) => return Err(AppError::Internal(anyhow::anyhow!("DB error"))),
+            Err(_) => {
+                return Err(AppError::Internal(anyhow::anyhow!(
+                    "Unknown Database Error"
+                )));
+            }
         };
 
         if current >= max {
-            return Err(AppError::BadRequest("MAX_CHARACTERS_REACHED".into()));
+            return Err(AppError::BadRequest(
+                "Character limit reached for this account".to_string(),
+            ));
         }
 
         self.character_repository
@@ -77,12 +87,16 @@ impl CharacterService {
     ) -> Result<(), AppError> {
         let character = match self.character_repository.find_by_id(character_id).await {
             Ok(c) => c,
-            Err(_) => return Err(AppError::NotFound),
+            Err(_) => {
+                return Err(AppError::Unauthorized(
+                    "Unable to fech character data".to_string(),
+                ));
+            }
         };
 
         if character.account_id != account_id {
             return Err(AppError::PermissionDenied(
-                "Character does not belong to this account".into(),
+                "Character does not belong to this account".to_string(),
             ));
         }
 

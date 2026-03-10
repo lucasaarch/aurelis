@@ -4,12 +4,14 @@ use crate::{
         Database,
         schema::{inventory, inventory_items},
     },
-    models::{inventory::InventoryModel, inventory_item::InventoryItemModel},
+    models::{inventory::InventoryModel, inventory_item::InventoryItemModel, item::ItemModel},
     repositories::{Repository, RepositoryError},
 };
 use diesel::prelude::*;
 use shared::models::inventory::Inventory;
+use shared::models::inventory_detailed_item::InventoryDetailedItem;
 use shared::models::inventory_item::InventoryItem;
+use shared::models::item::Item as DomainItem;
 use uuid::Uuid;
 
 #[derive(Clone)]
@@ -170,20 +172,64 @@ impl PgInventoryRepository {
         .await
     }
 
-    pub async fn find_slot_by_item_with_space(
+    /// Fetch inventory items for a character and inventory type together with item details.
+    /// This performs a LEFT JOIN and expects every inventory row to have an associated Item.
+    /// If any inventory row lacks its Item, a `RepositoryError::NotFound` is returned.
+    pub async fn find_items_with_details_by_character_and_type(
+        &self,
+        character_id: Uuid,
+        inv_type: String,
+    ) -> Result<Vec<InventoryDetailedItem>, RepositoryError> {
+        // Resolve the inventory for the given character and type
+        let inv = self
+            .find_by_character_and_type(character_id, inv_type)
+            .await?;
+
+        self.run_blocking(move |conn| {
+            use crate::db::schema::items;
+
+            // LEFT JOIN inventory_items -> items; select both sets of columns (items nullable)
+            let query = inventory_items::table
+                .left_join(items::table)
+                .filter(inventory_items::inventory_id.eq(inv.id))
+                .order(inventory_items::slot_index.asc())
+                .select((inventory_items::all_columns, items::all_columns.nullable()));
+
+            let rows: Vec<(InventoryItemModel, Option<ItemModel>)> = query.load(conn)?;
+
+            // Convert rows into InventoryDetailedItem; return NotFound if any item is missing.
+            let mut out: Vec<InventoryDetailedItem> = Vec::with_capacity(rows.len());
+
+            for (im, opt_item) in rows.into_iter() {
+                let inv_item: InventoryItem = im.into();
+                match opt_item {
+                    Some(item_model) => {
+                        let item: DomainItem = item_model.into();
+                        out.push(InventoryDetailedItem::from((inv_item, item)));
+                    }
+                    None => {
+                        // Item missing for a slot — treat as inconsistent data
+                        return Err(RepositoryError::NotFound);
+                    }
+                }
+            }
+
+            Ok(out)
+        })
+        .await
+    }
+
+    pub async fn delete_slot(
         &self,
         inventory_id: Uuid,
-        item_id: Uuid,
-        max_stack: i16,
-    ) -> Result<Option<InventoryItem>, RepositoryError> {
+        slot_index: i16,
+    ) -> Result<(), RepositoryError> {
         self.run_blocking(move |conn| {
-            inventory_items::table
+            diesel::delete(inventory_items::table)
                 .filter(inventory_items::inventory_id.eq(inventory_id))
-                .filter(inventory_items::item_id.eq(item_id))
-                .filter(inventory_items::quantity.lt(max_stack))
-                .first(conn)
-                .map(|r: InventoryItemModel| r.into())
-                .optional()
+                .filter(inventory_items::slot_index.eq(slot_index))
+                .execute(conn)
+                .map(|_| ())
                 .map_err(Into::into)
         })
         .await

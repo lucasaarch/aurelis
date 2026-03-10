@@ -106,8 +106,10 @@ impl JwtService {
         decode::<Claims>(token, key, &Validation::default())
             .map(|data| data.claims)
             .map_err(|e| match e.kind() {
-                jsonwebtoken::errors::ErrorKind::ExpiredSignature => AppError::Unauthorized,
-                _ => AppError::Unauthorized,
+                jsonwebtoken::errors::ErrorKind::ExpiredSignature => {
+                    AppError::Unauthorized("Token expired".to_string())
+                }
+                _ => AppError::Unauthorized("Invalid token".to_string()),
             })
     }
 
@@ -125,8 +127,10 @@ impl JwtService {
         decode::<Claims>(token, key, &Validation::default())
             .map(|data| data.claims)
             .map_err(|e| match e.kind() {
-                jsonwebtoken::errors::ErrorKind::ExpiredSignature => AppError::Unauthorized,
-                _ => AppError::Unauthorized,
+                jsonwebtoken::errors::ErrorKind::ExpiredSignature => {
+                    AppError::Unauthorized("Refresh token expired".to_string())
+                }
+                _ => AppError::Unauthorized("Invalid refresh token".to_string()),
             })
     }
 }

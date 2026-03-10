@@ -40,16 +40,16 @@ impl IntoResponse for ErrorResponse {
 
 #[derive(Debug, Error)]
 pub enum AppError {
-    #[error("Not found")]
-    NotFound,
+    #[error("Not found: {0}")]
+    NotFound(String),
 
     #[error("Conflict: {0}")]
     Conflict(String),
 
-    #[error("Unauthorized")]
-    Unauthorized,
+    #[error("Unauthorized: {0}")]
+    Unauthorized(String),
 
-    #[error("Permission denied")]
+    #[error("Permission denied: {0}")]
     PermissionDenied(String),
 
     #[error("Bad request: {0}")]
@@ -62,9 +62,9 @@ pub enum AppError {
 impl From<AppError> for Status {
     fn from(err: AppError) -> Self {
         match err {
-            AppError::NotFound => Status::not_found("Not found"),
+            AppError::NotFound(msg) => Status::not_found(msg),
             AppError::Conflict(msg) => Status::already_exists(msg),
-            AppError::Unauthorized => Status::unauthenticated("Unauthorized"),
+            AppError::Unauthorized(msg) => Status::unauthenticated(msg),
             AppError::PermissionDenied(msg) => Status::permission_denied(msg),
             AppError::BadRequest(msg) => Status::invalid_argument(msg),
             AppError::Internal(_) => Status::internal("Internal server error"),
@@ -75,12 +75,10 @@ impl From<AppError> for Status {
 impl From<AppError> for ErrorResponse {
     fn from(err: AppError) -> Self {
         match err {
-            AppError::NotFound => {
-                ErrorResponse::new(StatusCode::NOT_FOUND, "NOT_FOUND", "Not found")
-            }
+            AppError::NotFound(msg) => ErrorResponse::new(StatusCode::NOT_FOUND, "NOT_FOUND", msg),
             AppError::Conflict(msg) => ErrorResponse::new(StatusCode::CONFLICT, "CONFLICT", msg),
-            AppError::Unauthorized => {
-                ErrorResponse::new(StatusCode::UNAUTHORIZED, "UNAUTHORIZED", "Unauthorized")
+            AppError::Unauthorized(msg) => {
+                ErrorResponse::new(StatusCode::UNAUTHORIZED, "UNAUTHORIZED", msg)
             }
             AppError::BadRequest(msg) => {
                 // Use the provided message as the error code and provide a human-friendly message
@@ -109,7 +107,7 @@ impl From<AppError> for ErrorResponse {
 impl From<RepositoryError> for AppError {
     fn from(err: RepositoryError) -> Self {
         match err {
-            RepositoryError::NotFound => AppError::NotFound,
+            RepositoryError::NotFound => AppError::NotFound("Resource not found".to_string()),
             RepositoryError::Conflict(msg) => AppError::Conflict(msg),
             RepositoryError::Database(msg) | RepositoryError::Internal(msg) => {
                 AppError::Internal(anyhow::anyhow!(msg))

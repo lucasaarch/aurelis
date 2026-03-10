@@ -40,3 +40,15 @@ tonic-reflection = "0.14.5"
 [build-dependencies]
 tonic-prost-build = "0.14.5"
 protoc-bin-vendored = "2.0"
+
+[lib]
+name = "api_server"
+path = "src/lib.rs"
+
+[[bin]]
+name = "api-server"
+path = "src/main.rs"
+
+[[bin]]
+name = "gen_openapi"
+path = "src/bin/gen_openapi.rs"

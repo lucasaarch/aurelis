@@ -50,6 +50,7 @@ impl From<diesel::result::Error> for RepositoryError {
 pub trait Repository {
     fn db(&self) -> Database;
 
+    #[allow(async_fn_in_trait)]
     async fn run_blocking<F, T>(&self, f: F) -> Result<T, RepositoryError>
     where
         F: FnOnce(&mut PgConnection) -> Result<T, RepositoryError> + Send + 'static,

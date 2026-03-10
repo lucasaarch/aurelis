@@ -81,4 +81,21 @@ impl PgItemRepository {
         })
         .await
     }
+
+    pub async fn list_by_ids(&self, ids: Vec<Uuid>) -> Result<Vec<Item>, RepositoryError> {
+        // Fast path for empty input
+        if ids.is_empty() {
+            return Ok(vec![]);
+        }
+
+        self.run_blocking(move |conn| {
+            use crate::db::schema::items::dsl::*;
+            items
+                .filter(id.eq_any(ids))
+                .load::<ItemModel>(conn)
+                .map(|v| v.into_iter().map(|m| m.into()).collect())
+                .map_err(Into::into)
+        })
+        .await
+    }
 }

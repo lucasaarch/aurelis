@@ -69,7 +69,7 @@ impl Modify for SecurityAddon {
         title = "Resona API"
     )
 )]
-struct ApiDoc;
+pub struct ApiDoc;
 
 #[derive(Clone)]
 pub struct AppState {

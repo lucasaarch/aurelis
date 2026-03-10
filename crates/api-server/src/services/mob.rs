@@ -28,11 +28,17 @@ impl MobService {
     pub async fn create(&self, actor_id: Uuid, input: CreateMobInput) -> Result<Mob, AppError> {
         let account = match self.account_repository.find_by_id(actor_id).await {
             Ok(a) => a,
-            Err(_) => return Err(AppError::Unauthorized),
+            Err(_) => {
+                return Err(AppError::Unauthorized(
+                    "Unable to fetch account data".to_string(),
+                ));
+            }
         };
 
         if !account.is_admin {
-            return Err(AppError::Unauthorized);
+            return Err(AppError::PermissionDenied(
+                "Only admins can access this resource".to_string(),
+            ));
         }
 
         let slug = generate_slug(&input.name);

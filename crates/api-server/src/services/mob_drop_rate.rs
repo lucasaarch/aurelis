@@ -31,11 +31,13 @@ impl MobDropRateService {
     ) -> Result<MobDropRate, AppError> {
         let account = match self.account_repository.find_by_id(actor_id).await {
             Ok(a) => a,
-            Err(_) => return Err(AppError::Unauthorized),
+            Err(_) => return Err(AppError::NotFound("Account not found".to_string())),
         };
 
         if !account.is_admin {
-            return Err(AppError::Unauthorized);
+            return Err(AppError::PermissionDenied(
+                "Only admins can create mob drop rates".to_string(),
+            ));
         }
 
         self.repository

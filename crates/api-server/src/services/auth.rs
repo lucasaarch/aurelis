@@ -57,7 +57,7 @@ impl AuthService {
         self.repository
             .find_by_id(claims.sub)
             .await
-            .map_err(|_| AppError::Unauthorized)
+            .map_err(|_| AppError::Unauthorized("Invalid token".to_string()))
     }
 
     pub async fn register(&self, params: RegisterParams) -> Result<Account, AppError> {
@@ -77,12 +77,14 @@ impl AuthService {
             .repository
             .find_by_email_with_hash(&params.email)
             .await
-            .map_err(|_| AppError::Unauthorized)?;
+            .map_err(|_| AppError::Unauthorized("Email or password is incorrect".to_string()))?;
 
         let valid = self.hash_service.verify(&params.password, &password_hash)?;
 
         if !valid {
-            return Err(AppError::Unauthorized);
+            return Err(AppError::Unauthorized(
+                "Email or password is incorrect".to_string(),
+            ));
         }
 
         match params.context {
@@ -113,7 +115,7 @@ impl AuthService {
             .repository
             .find_by_id(claims.sub)
             .await
-            .map_err(|_| AppError::Unauthorized)?;
+            .map_err(|_| AppError::Unauthorized("Invalid refresh token".to_string()))?;
 
         match params.context {
             TokenContext::Game => self.check_if_can_perform_game_login(&account)?,

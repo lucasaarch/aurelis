@@ -46,14 +46,28 @@ impl ItemService {
             .map_err(Into::into)
     }
 
+    /// Batch fetch items by ids. Returns an empty vec when `ids` is empty.
+    pub async fn list_by_ids(&self, ids: Vec<Uuid>) -> Result<Vec<Item>, AppError> {
+        self.item_repository
+            .list_by_ids(ids)
+            .await
+            .map_err(Into::into)
+    }
+
     pub async fn create(&self, actor_id: Uuid, input: CreateItemInput) -> Result<Item, AppError> {
         let account = match self.account_service.find_by_id(actor_id).await {
             Ok(a) => a,
-            Err(_) => return Err(AppError::Unauthorized),
+            Err(_) => {
+                return Err(AppError::Unauthorized(
+                    "Unable to fetch account data".to_string(),
+                ));
+            }
         };
 
         if !account.is_admin {
-            return Err(AppError::Unauthorized);
+            return Err(AppError::PermissionDenied(
+                "Only admins can access this resource".to_string(),
+            ));
         }
 
         let slug = generate_slug(&input.name);
@@ -84,11 +98,17 @@ impl ItemService {
     ) -> Result<(), AppError> {
         let account = match self.account_service.find_by_id(actor_id).await {
             Ok(a) => a,
-            Err(_) => return Err(AppError::Unauthorized),
+            Err(_) => {
+                return Err(AppError::Unauthorized(
+                    "Unable to fetch account data".to_string(),
+                ));
+            }
         };
 
         if !account.is_admin {
-            return Err(AppError::Unauthorized);
+            return Err(AppError::PermissionDenied(
+                "Only admins can access this resource".to_string(),
+            ));
         }
 
         let item = self.find_by_id(item_id).await?;
