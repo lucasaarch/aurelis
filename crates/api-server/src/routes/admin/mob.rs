@@ -2,34 +2,13 @@ use axum::extract::State;
 use axum::http::StatusCode;
 use axum::routing::post;
 use axum::{Json, Router};
-use serde::{Deserialize, Serialize};
+use shared::dto::admin::mob::{CreateMobRequest, CreateMobResponse};
 use std::sync::Arc;
-use utoipa::ToSchema;
-use validator::Validate;
 
 use crate::app::AppState;
 use crate::error::ErrorResponse;
 use crate::routes::middlewares::{AuthUser, ValidatedBody};
 use crate::services::mob::CreateMobInput;
-use shared::utils::validation::validate_mob_type;
-
-#[derive(Deserialize, ToSchema, Validate)]
-pub struct CreateMobRequest {
-    #[validate(length(min = 1, max = 64))]
-    pub name: String,
-
-    pub description: Option<String>,
-
-    #[validate(custom(function = validate_mob_type))]
-    pub mob_type: String,
-}
-
-#[derive(Serialize, ToSchema)]
-pub struct CreateMobResponse {
-    pub id: String,
-    pub slug: String,
-    pub name: String,
-}
 
 pub fn router() -> Router<Arc<AppState>> {
     Router::new().route("/admin/mobs", post(create_mob))

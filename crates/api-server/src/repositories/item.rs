@@ -82,6 +82,22 @@ impl PgItemRepository {
         .await
     }
 
+    pub async fn list(&self, page: i64, limit: i64) -> Result<(Vec<Item>, i64), RepositoryError> {
+        let offset = (page - 1) * limit;
+        self.run_blocking(move |conn| {
+            use crate::db::schema::items::dsl::*;
+            let total = items.count().get_result::<i64>(conn)?;
+            let rows = items
+                .order(created_at.desc())
+                .limit(limit)
+                .offset(offset)
+                .load::<ItemModel>(conn)
+                .map(|v| v.into_iter().map(|m| m.into()).collect())?;
+            Ok((rows, total))
+        })
+        .await
+    }
+
     pub async fn list_by_ids(&self, ids: Vec<Uuid>) -> Result<Vec<Item>, RepositoryError> {
         // Fast path for empty input
         if ids.is_empty() {

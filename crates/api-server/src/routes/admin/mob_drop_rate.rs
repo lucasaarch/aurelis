@@ -2,35 +2,12 @@ use axum::extract::State;
 use axum::http::StatusCode;
 use axum::routing::post;
 use axum::{Json, Router};
-use bigdecimal::BigDecimal;
-use serde::{Deserialize, Serialize};
+use shared::dto::admin::mob_drop_rate::{CreateMobDropRateRequest, CreateMobDropRateResponse};
 use std::sync::Arc;
-use utoipa::ToSchema;
-use uuid::Uuid;
-use validator::Validate;
 
 use crate::app::AppState;
 use crate::error::ErrorResponse;
 use crate::routes::middlewares::{AuthUser, ValidatedBody};
-use shared::utils::validation::validate_drop_chance;
-
-#[derive(Deserialize, ToSchema, Validate)]
-pub struct CreateMobDropRateRequest {
-    #[schema(value_type = String, format = "uuid")]
-    pub mob_id: Uuid,
-
-    #[schema(value_type = String, format = "uuid")]
-    pub item_id: Uuid,
-
-    #[validate(custom(function = validate_drop_chance))]
-    #[schema(value_type = f64, format = "decimal")]
-    pub drop_chance: BigDecimal,
-}
-
-#[derive(Serialize, ToSchema)]
-pub struct CreateMobDropRateResponse {
-    pub id: String,
-}
 
 pub fn router() -> Router<Arc<AppState>> {
     Router::new().route("/admin/mob-drop-rates", post(create_mob_drop_rate))

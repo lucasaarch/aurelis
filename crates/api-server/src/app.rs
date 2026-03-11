@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
 use axum::Router;
+use shared::dto::admin::item::ListItemsQuery;
 use tokio::net::TcpListener;
 use tonic::transport::Server;
 use tonic_reflection::server::Builder as ReflectionBuilder;
@@ -8,6 +9,10 @@ use tracing::info;
 use utoipa::openapi::security::{HttpAuthScheme, HttpBuilder, SecurityScheme};
 use utoipa::{Modify, OpenApi};
 use utoipa_scalar::{Scalar, Servable};
+
+use http::header::HeaderValue;
+use http::{Method, header};
+use tower_http::cors::CorsLayer;
 
 use crate::config::Config;
 use crate::db::Database;
@@ -55,18 +60,29 @@ impl Modify for SecurityAddon {
     paths(
         routes::admin::mob::create_mob,
         routes::admin::mob_drop_rate::create_mob_drop_rate,
+        routes::admin::item::list_items,
         routes::admin::item::give_item,
         routes::admin::item::create_item,
         routes::auth::register,
         routes::auth::login,
+        routes::auth::refresh_token,
     ),
     tags(
         (name = "Admin", description = "Admin-only endpoints"),
         (name = "Auth", description = "Authentication endpoints"),
     ),
+    components(
+        schemas(
+            shared::dto::admin::item::ListItemsQuery
+        )
+    ),
     modifiers(&SecurityAddon),
     info(
         title = "Resona API"
+    ),
+    servers(
+        (url = "http://localhost:8080", description = "Local development server"),
+        (url = "https://api.resona.dev", description = "Production server")
     )
 )]
 pub struct ApiDoc;
@@ -140,11 +156,40 @@ pub async fn run(config: Config) {
         let port = config.server.http_port;
 
         tokio::spawn(async move {
+            // Configure CORS using allowed origins from configuration.
+            // We build a CorsLayer that either permits all origins (if "*" present)
+            // or uses a dynamic origin checker against the configured list.
+            let allowed_origins = config.server.allowed_origins.clone();
+            let cors = if allowed_origins.iter().any(|o| o == "*") {
+                // permissive for convenience in dev if "*" is used.
+                CorsLayer::permissive()
+            } else {
+                let allowed = allowed_origins.clone();
+                let origin_vals: Vec<HeaderValue> = allowed
+                    .iter()
+                    .filter_map(|a| HeaderValue::from_str(a).ok())
+                    .collect();
+
+                CorsLayer::new()
+                    .allow_origin(origin_vals)
+                    .allow_methods([
+                        Method::GET,
+                        Method::POST,
+                        Method::PUT,
+                        Method::DELETE,
+                        Method::OPTIONS,
+                        Method::PATCH,
+                    ])
+                    .allow_headers([header::AUTHORIZATION, header::CONTENT_TYPE, header::ACCEPT])
+                    .allow_credentials(true)
+            };
+
             let app = Router::new()
                 .merge(Scalar::with_url("/docs", ApiDoc::openapi()))
                 .merge(routes::auth::router())
                 .merge(routes::admin::router())
-                .with_state(state);
+                .with_state(state)
+                .layer(cors);
 
             let addr = format!("0.0.0.0:{}", port);
             let listener = TcpListener::bind(&addr)

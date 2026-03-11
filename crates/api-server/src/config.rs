@@ -15,6 +15,9 @@ pub struct DatabaseConfig {
 pub struct ServerConfig {
     pub http_port: u16,
     pub grpc_port: u16,
+    /// Allowed origins for CORS. Parsed from the API_ALLOWED_ORIGINS env var
+    /// as a comma-separated list. Example: "http://localhost:3000,https://app.example.com"
+    pub allowed_origins: Vec<String>,
 }
 
 #[derive(Debug, Clone)]
@@ -44,7 +47,27 @@ impl Config {
             },
             server: ServerConfig {
                 http_port: env_var("API_SERVER_HTTP_PORT", Some(8080))?,
-                grpc_port: env_var("API_SERVER_HTTP_PORT", Some(50051))?,
+                grpc_port: env_var("API_SERVER_GRPC_PORT", Some(50051))?,
+                allowed_origins: {
+                    // Parse comma-separated API_ALLOWED_ORIGINS env var into Vec<String>.
+                    // If not present, default to a sensible local development origin.
+                    match std::env::var("API_ALLOWED_ORIGINS") {
+                        Ok(s) => s
+                            .split(',')
+                            .map(|s| s.trim().to_string())
+                            .filter(|s| !s.is_empty())
+                            .collect::<Vec<String>>(),
+                        Err(std::env::VarError::NotPresent) => {
+                            vec!["http://localhost:3000".to_string()]
+                        }
+                        Err(e) => {
+                            return Err(ConfigError::InvalidEnvVar(
+                                "API_ALLOWED_ORIGINS".to_string(),
+                                e.to_string(),
+                            ));
+                        }
+                    }
+                },
             },
             jwt: JwtConfig {
                 secret_web: require_env_var("API_JWT_SECRET_WEB")?,

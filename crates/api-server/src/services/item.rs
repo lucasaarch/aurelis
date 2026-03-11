@@ -46,6 +46,33 @@ impl ItemService {
             .map_err(Into::into)
     }
 
+    pub async fn list(
+        &self,
+        actor_id: Uuid,
+        page: i64,
+        limit: i64,
+    ) -> Result<(Vec<Item>, i64), AppError> {
+        let account = match self.account_service.find_by_id(actor_id).await {
+            Ok(a) => a,
+            Err(_) => {
+                return Err(AppError::Unauthorized(
+                    "Unable to fetch account data".to_string(),
+                ));
+            }
+        };
+
+        if !account.is_admin {
+            return Err(AppError::PermissionDenied(
+                "Only admins can access this resource".to_string(),
+            ));
+        }
+
+        self.item_repository
+            .list(page, limit)
+            .await
+            .map_err(Into::into)
+    }
+
     /// Batch fetch items by ids. Returns an empty vec when `ids` is empty.
     pub async fn list_by_ids(&self, ids: Vec<Uuid>) -> Result<Vec<Item>, AppError> {
         self.item_repository

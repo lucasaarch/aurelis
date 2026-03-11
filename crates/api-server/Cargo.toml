@@ -37,6 +37,8 @@ tonic = "0.14.5"
 prost = "0.14.3"
 tonic-prost = "0.14.5"
 tonic-reflection = "0.14.5"
+http = "1.4.0"
+tower-http = { version = "0.6.8", features = ["cors"] }
 
 [build-dependencies]
 tonic-prost-build = "0.14.5"

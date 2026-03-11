@@ -1,81 +1,78 @@
 use axum::extract::State;
 use axum::http::StatusCode;
-use axum::routing::post;
+use axum::routing::{get, post};
 use axum::{Json, Router};
-use serde::{Deserialize, Serialize};
+use shared::dto::admin::item::{
+    CreateItemRequest, CreateItemResponse, GiveItemRequest, GiveItemResponse, ItemSummary,
+    ListItemsQuery, ListItemsResponse,
+};
 use std::sync::Arc;
-use utoipa::ToSchema;
-use uuid::Uuid;
-use validator::Validate;
 
 use crate::app::AppState;
 use crate::error::ErrorResponse;
-use crate::routes::middlewares::{AuthUser, ValidatedBody};
+use crate::routes::middlewares::{AuthUser, ValidatedBody, ValidatedQuery};
 use crate::services::item::CreateItemInput;
-use shared::utils::validation::{
-    validate_class, validate_equipment_slot, validate_inventory_type, validate_rarity,
-    validate_stats, validate_uuid,
-};
-
-#[derive(Deserialize, ToSchema, Validate)]
-pub struct CreateItemRequest {
-    #[validate(length(min = 1, max = 64))]
-    pub name: String,
-
-    #[validate(custom(function = validate_class))]
-    pub class: Option<String>,
-
-    pub description: Option<String>,
-
-    #[validate(custom(function = validate_rarity))]
-    pub rarity: String,
-
-    #[validate(custom(function = validate_equipment_slot))]
-    pub equipment_slot: Option<String>,
-
-    #[validate(range(min = 1, max = 40))]
-    pub level_req: Option<i16>,
-
-    #[validate(custom(function = validate_stats))]
-    pub stats: Option<serde_json::Value>,
-
-    #[validate(custom(function = validate_inventory_type))]
-    pub inventory_type: String,
-
-    #[validate(range(min = 1))]
-    pub max_stack: Option<i16>,
-}
-
-#[derive(Serialize, ToSchema)]
-pub struct CreateItemResponse {
-    pub id: String,
-    pub name: String,
-    pub slug: String,
-}
-
-#[derive(Deserialize, ToSchema, Validate)]
-pub struct GiveItemRequest {
-    #[validate(custom(function = validate_uuid))]
-    #[schema(value_type = String, format = "uuid")]
-    pub character_id: Uuid,
-
-    #[validate(custom(function = validate_uuid))]
-    #[schema(value_type = String, format = "uuid")]
-    pub item_id: Uuid,
-
-    #[validate(range(min = 1))]
-    pub quantity: Option<i16>,
-}
-
-#[derive(Serialize, ToSchema)]
-pub struct GiveItemResponse {
-    pub ok: bool,
-}
 
 pub fn router() -> Router<Arc<AppState>> {
     Router::new()
-        .route("/admin/items", post(create_item))
+        .route("/admin/items", get(list_items).post(create_item))
         .route("/admin/items/give", post(give_item))
+}
+
+#[utoipa::path(
+    get,
+    path = "/admin/items",
+    params(
+        ("page" = Option<i64>, Query, description = "Page number (default: 1)"),
+        ("limit" = Option<i64>, Query, description = "Items per page (default: 20)"),
+    ),
+    responses(
+        (status = 200, description = "Items listed", body = ListItemsResponse),
+        (status = 401, description = "Unauthorized", body = ErrorResponse),
+        (status = 403, description = "Forbidden", body = ErrorResponse),
+    ),
+    security(("bearer_auth" = [])),
+    tag = "Admin"
+)]
+pub async fn list_items(
+    State(state): State<Arc<AppState>>,
+    AuthUser(admin_id): AuthUser,
+    ValidatedQuery(query): ValidatedQuery<ListItemsQuery>,
+) -> Result<Json<ListItemsResponse>, ErrorResponse> {
+    let page = query.page.max(1);
+    let limit = query.limit.clamp(1, 100);
+
+    let (items, total) = state
+        .item_service
+        .list(admin_id, page, limit)
+        .await
+        .map_err(ErrorResponse::from)?;
+
+    let total_pages = (total + limit - 1) / limit;
+    let items = items
+        .into_iter()
+        .map(|i| ItemSummary {
+            id: i.id.to_string(),
+            slug: i.slug,
+            name: i.name,
+            rarity: i.rarity.to_string(),
+            inventory_type: i.inventory_type.into(),
+            class: i.class.map(|c| c.to_string()),
+            equipment_slot: i.equipment_slot.map(Into::into),
+            level_req: i.level_req,
+            max_stack: i.max_stack,
+            description: i.description,
+            created_at: i.created_at.to_string(),
+        })
+        .collect();
+
+    Ok(Json(ListItemsResponse {
+        items,
+        total,
+        page,
+        limit,
+        total_pages,
+    }))
 }
 
 #[utoipa::path(

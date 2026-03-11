@@ -5,9 +5,11 @@ use axum::Router;
 use axum::extract::State;
 use axum::http::StatusCode;
 use axum::routing::post;
-use serde::{Deserialize, Serialize};
-use utoipa::ToSchema;
-use validator::Validate;
+use shared::dto::auth::LoginRequest;
+use shared::dto::auth::LoginResponse;
+use shared::dto::auth::RefreshRequest;
+use shared::dto::auth::RefreshResponse;
+use shared::dto::auth::RegisterRequest;
 
 use crate::app::AppState;
 use crate::error::ErrorResponse;
@@ -15,24 +17,12 @@ use crate::routes::middlewares::ValidatedBody;
 use crate::services::auth::RefreshTokenParams;
 use crate::services::auth::{LoginParams, RegisterParams};
 use crate::services::jwt::TokenContext;
-use shared::utils::validation::validate_strong_password;
-
-#[derive(Deserialize, ToSchema, Validate)]
-pub struct RegisterRequest {
-    #[validate(email(message = "must be a valid email address"))]
-    pub email: String,
-    #[validate(
-        length(min = 8, message = "must be at least 8 characters"),
-        custom(function = validate_strong_password)
-    )]
-    pub password: String,
-}
 
 pub fn router() -> Router<Arc<AppState>> {
     Router::new()
         .route("/auth/register", post(register))
         .route("/auth/login", post(login))
-        .route("/auth/refresh", post(refresh_web))
+        .route("/auth/refresh", post(refresh_token))
 }
 
 #[utoipa::path(
@@ -60,19 +50,6 @@ pub async fn register(
         .await?;
 
     Ok(StatusCode::CREATED)
-}
-
-#[derive(Deserialize, ToSchema, Validate)]
-pub struct LoginRequest {
-    #[validate(email(message = "must be a valid email address"))]
-    pub email: String,
-    pub password: String,
-}
-
-#[derive(Serialize, ToSchema)]
-pub struct LoginResponse {
-    pub access_token: String,
-    pub refresh_token: String,
 }
 
 #[utoipa::path(
@@ -106,11 +83,6 @@ pub async fn login(
     }))
 }
 
-#[derive(Deserialize, ToSchema, Validate)]
-pub struct RefreshRequest {
-    pub refresh_token: String,
-}
-
 #[utoipa::path(
     post,
     path = "/auth/refresh",
@@ -118,15 +90,15 @@ pub struct RefreshRequest {
     description = "Refreshes a Web access token using a refresh token.",
     request_body = RefreshRequest,
     responses(
-        (status = 200, description = "Refresh successful", body = LoginResponse),
+        (status = 200, description = "Refresh successful", body = RefreshResponse),
         (status = 401, description = "Invalid or expired refresh token", body = ErrorResponse),
     ),
     tag = "Auth",
 )]
-pub async fn refresh_web(
+pub async fn refresh_token(
     State(state): State<Arc<AppState>>,
     ValidatedBody(body): ValidatedBody<RefreshRequest>,
-) -> Result<Json<LoginResponse>, ErrorResponse> {
+) -> Result<Json<RefreshResponse>, ErrorResponse> {
     let result = state
         .auth_service
         .refresh_token(RefreshTokenParams {
@@ -135,7 +107,7 @@ pub async fn refresh_web(
         })
         .await?;
 
-    Ok(Json(LoginResponse {
+    Ok(Json(RefreshResponse {
         access_token: result.access_token,
         refresh_token: result.refresh_token,
     }))
