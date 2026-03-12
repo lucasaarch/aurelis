@@ -3,6 +3,7 @@
 import { standardSchemaResolver } from "@hookform/resolvers/standard-schema";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
+import { CorneredPanel } from "@/components/cornered-panel";
 import { LoginForm } from "@/components/login/login-form";
 import { useLogin } from "@/hooks/use-auth";
 import { LoginRequest } from "@/lib/api";
@@ -10,8 +11,8 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 
 const loginSchema = z.object({
-    email: z.email("E-mail inválido."),
-    password: z.string().min(1, "Senha obrigatória."),
+    email: z.email("Invalid email address."),
+    password: z.string().min(1, "Password is required."),
 });
 
 export default function LoginPage() {
@@ -78,33 +79,22 @@ export default function LoginPage() {
                         width={556.79}
                         height={183.67}
                     />
-                    <p className="text-sm italic text-amber-700/60 tracking-wide">
-                        Painel de administração
-                    </p>
                 </div>
 
-                <div className="relative rounded-sm border border-amber-600/20 bg-linear-to-b from-[#12100a]/95 to-[#0c0a06]/98 p-8 shadow-[0_20px_60px_rgba(0,0,0,0.6),inset_0_0_80px_rgba(180,140,50,0.02)]">
-                    <div className="absolute left-[10%] right-[10%] top-0 h-px bg-linear-to-r from-transparent via-amber-500/50 to-transparent" />
-                    <div className="absolute bottom-0 left-[20%] right-[20%] h-px bg-linear-to-r from-transparent via-amber-600/20 to-transparent" />
-
-                    <div className="absolute left-0 top-0 h-3 w-3 border-l border-t border-amber-500/40" />
-                    <div className="absolute right-0 top-0 h-3 w-3 border-r border-t border-amber-500/40" />
-                    <div className="absolute bottom-0 left-0 h-3 w-3 border-b border-l border-amber-500/40" />
-                    <div className="absolute bottom-0 right-0 h-3 w-3 border-b border-r border-amber-500/40" />
-
+                <CorneredPanel>
                     <div className="mb-5">
                         <p className="text-[0.7rem] font-semibold uppercase tracking-[0.2em] text-amber-600/70">
-                            Acesso restrito
+                            Restricted access
                         </p>
                         <p className="mt-1 text-sm font-light italic text-amber-200/30">
-                            Digite suas credenciais para continuar.
+                            Enter your credentials to continue.
                         </p>
                     </div>
 
                     <div className="mb-5 h-px bg-linear-to-r from-transparent via-amber-600/15 to-transparent" />
 
                     <LoginForm form={form} onSubmit={onSubmit} />
-                </div>
+                </CorneredPanel>
             </div>
         </div>
     );

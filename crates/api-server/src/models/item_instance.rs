@@ -1,7 +1,6 @@
 use chrono::{NaiveDateTime, Utc};
 use diesel::prelude::{Insertable, Queryable};
 use serde_json::Value;
-use shared::models::item_instance::ItemInstance;
 use uuid::Uuid;
 
 #[derive(Queryable, Insertable)]
@@ -42,24 +41,6 @@ impl ItemInstanceModel {
             in_trade: false,
             created_at: now,
             updated_at: now,
-        }
-    }
-}
-
-impl From<ItemInstanceModel> for ItemInstance {
-    fn from(model: ItemInstanceModel) -> Self {
-        Self {
-            id: model.id,
-            item_id: model.item_id,
-            refinement: model.refinement,
-            gem_slots: model.gem_slots,
-            attributes: model.attributes,
-            owner_character_id: model.owner_character_id,
-            owner_account_id: model.owner_account_id,
-            in_shared_storage: model.in_shared_storage,
-            in_trade: model.in_trade,
-            created_at: model.created_at,
-            updated_at: model.updated_at,
         }
     }
 }

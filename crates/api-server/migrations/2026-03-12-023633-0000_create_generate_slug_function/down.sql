@@ -1,0 +1,1 @@
+-- Intentionally left blank. We keep generate_slug permanently.

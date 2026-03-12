@@ -1,6 +1,5 @@
 use chrono::{NaiveDateTime, Utc};
 use diesel::prelude::{Insertable, Queryable};
-use shared::models::skill::Skill;
 use uuid::Uuid;
 
 use crate::models::character_class::CharacterClassModel;
@@ -39,22 +38,6 @@ impl SkillModel {
             level_req,
             max_level,
             created_at: Utc::now().naive_utc(),
-        }
-    }
-}
-
-impl From<SkillModel> for Skill {
-    fn from(model: SkillModel) -> Self {
-        Self {
-            id: model.id,
-            slug: model.slug,
-            name: model.name,
-            description: model.description,
-            character_class: model.character_class.into(),
-            line_id: model.line_id,
-            level_req: model.level_req,
-            max_level: model.max_level,
-            created_at: model.created_at,
         }
     }
 }

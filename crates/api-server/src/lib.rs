@@ -1,6 +1,7 @@
 pub mod app;
 pub mod config;
 pub mod db;
+pub mod dto;
 pub mod error;
 pub mod grpc;
 pub mod models;

@@ -1,7 +1,6 @@
 use chrono::NaiveDateTime;
 use diesel::prelude::{Insertable, Queryable};
 use serde_json::Value;
-use shared::models::item::Item;
 use uuid::Uuid;
 
 use crate::models::{
@@ -59,24 +58,5 @@ impl ItemModel {
 
     pub fn equipable(&self) -> bool {
         self.equipment_slot.is_some()
-    }
-}
-
-impl From<ItemModel> for Item {
-    fn from(model: ItemModel) -> Self {
-        Self {
-            id: model.id,
-            name: model.name,
-            class: model.class.map(Into::into),
-            description: model.description,
-            rarity: model.rarity.into(),
-            equipment_slot: model.equipment_slot.map(Into::into),
-            level_req: model.level_req,
-            stats: model.stats,
-            created_at: model.created_at,
-            slug: model.slug,
-            inventory_type: model.inventory_type.into(),
-            max_stack: model.max_stack,
-        }
     }
 }

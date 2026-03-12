@@ -45,6 +45,71 @@
               "type": "integer",
               "format": "int64"
             }
+          },
+          {
+            "name": "class",
+            "in": "query",
+            "description": "Filter by class",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "rarity",
+            "in": "query",
+            "description": "Filter by rarity",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "equipmentSlot",
+            "in": "query",
+            "description": "Filter by equipment slot",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "inventoryType",
+            "in": "query",
+            "description": "Filter by inventory type",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "levelMin",
+            "in": "query",
+            "description": "Minimum level requirement",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "levelMax",
+            "in": "query",
+            "description": "Maximum level requirement",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "search",
+            "in": "query",
+            "description": "Search by name",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "responses": {
@@ -84,90 +149,38 @@
             "bearer_auth": []
           }
         ]
-      },
-      "post": {
-        "tags": [
-          "Admin"
-        ],
-        "operationId": "create_item",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/CreateItemRequest"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "201": {
-            "description": "Item created",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CreateItemResponse"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Bad request",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Unauthorized",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "bearer_auth": []
-          }
-        ]
       }
     },
-    "/admin/items/give": {
-      "post": {
+    "/admin/items/{slug}": {
+      "get": {
         "tags": [
           "Admin"
         ],
-        "operationId": "give_item",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/GiveItemRequest"
-              }
+        "operationId": "get_item",
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "description": "Item slug",
+            "required": true,
+            "schema": {
+              "type": "string"
             }
-          },
-          "required": true
-        },
+          }
+        ],
         "responses": {
-          "201": {
-            "description": "Item given",
+          "200": {
+            "description": "Item found",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/GiveItemResponse"
+                  "$ref": "#/components/schemas/ItemDetailsResponse"
                 }
               }
             }
           },
-          "400": {
-            "description": "Bad request",
+          "401": {
+            "description": "Unauthorized",
             "content": {
               "application/json": {
                 "schema": {
@@ -176,8 +189,18 @@
               }
             }
           },
-          "401": {
-            "description": "Unauthorized",
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
             "content": {
               "application/json": {
                 "schema": {
@@ -250,34 +273,64 @@
       }
     },
     "/admin/mobs": {
-      "post": {
+      "get": {
         "tags": [
           "Admin"
         ],
-        "operationId": "create_mob",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/CreateMobRequest"
-              }
+        "operationId": "list_mobs",
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "description": "Page number (default: 1)",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
             }
           },
-          "required": true
-        },
+          {
+            "name": "limit",
+            "in": "query",
+            "description": "Mobs per page (default: 20)",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          },
+          {
+            "name": "mobType",
+            "in": "query",
+            "description": "Filter by mob type",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "search",
+            "in": "query",
+            "description": "Search by name",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
         "responses": {
-          "201": {
-            "description": "Mob created",
+          "200": {
+            "description": "Mobs listed",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/CreateMobResponse"
+                  "$ref": "#/components/schemas/ListMobsResponse"
                 }
               }
             }
           },
-          "400": {
-            "description": "Bad request",
+          "401": {
+            "description": "Unauthorized",
             "content": {
               "application/json": {
                 "schema": {
@@ -286,8 +339,74 @@
               }
             }
           },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ]
+      }
+    },
+    "/admin/mobs/{slug}": {
+      "get": {
+        "tags": [
+          "Admin"
+        ],
+        "operationId": "get_mob",
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "description": "Mob slug",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Mob found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MobDetailsResponse"
+                }
+              }
+            }
+          },
           "401": {
             "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
             "content": {
               "application/json": {
                 "schema": {
@@ -426,74 +545,26 @@
   },
   "components": {
     "schemas": {
-      "CreateItemRequest": {
-        "type": "object",
-        "required": [
-          "name",
-          "rarity",
-          "inventoryType"
-        ],
-        "properties": {
-          "class": {
-            "type": [
-              "string",
-              "null"
-            ]
-          },
-          "description": {
-            "type": [
-              "string",
-              "null"
-            ]
-          },
-          "equipmentSlot": {
-            "type": [
-              "string",
-              "null"
-            ]
-          },
-          "inventoryType": {
-            "type": "string"
-          },
-          "levelReq": {
-            "type": [
-              "integer",
-              "null"
-            ],
-            "format": "int32"
-          },
-          "maxStack": {
-            "type": [
-              "integer",
-              "null"
-            ],
-            "format": "int32"
-          },
-          "name": {
-            "type": "string"
-          },
-          "rarity": {
-            "type": "string"
-          },
-          "stats": {}
-        }
-      },
-      "CreateItemResponse": {
+      "AccountSummary": {
         "type": "object",
         "required": [
           "id",
-          "name",
-          "slug"
+          "email",
+          "isAdmin",
+          "createdAt"
         ],
         "properties": {
+          "createdAt": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string"
+          },
           "id": {
             "type": "string"
           },
-          "name": {
-            "type": "string"
-          },
-          "slug": {
-            "type": "string"
+          "isAdmin": {
+            "type": "boolean"
           }
         }
       },
@@ -530,46 +601,6 @@
           }
         }
       },
-      "CreateMobRequest": {
-        "type": "object",
-        "required": [
-          "name",
-          "mobType"
-        ],
-        "properties": {
-          "description": {
-            "type": [
-              "string",
-              "null"
-            ]
-          },
-          "mobType": {
-            "type": "string"
-          },
-          "name": {
-            "type": "string"
-          }
-        }
-      },
-      "CreateMobResponse": {
-        "type": "object",
-        "required": [
-          "id",
-          "slug",
-          "name"
-        ],
-        "properties": {
-          "id": {
-            "type": "string"
-          },
-          "name": {
-            "type": "string"
-          },
-          "slug": {
-            "type": "string"
-          }
-        }
-      },
       "ErrorResponse": {
         "type": "object",
         "required": [
@@ -595,39 +626,66 @@
           }
         }
       },
-      "GiveItemRequest": {
+      "ItemDetailsResponse": {
         "type": "object",
         "required": [
-          "characterId",
-          "itemId"
+          "id",
+          "slug",
+          "name",
+          "rarity",
+          "inventoryType",
+          "maxStack",
+          "createdAt"
         ],
         "properties": {
-          "characterId": {
-            "type": "string",
-            "format": "uuid"
+          "class": {
+            "type": [
+              "string",
+              "null"
+            ]
           },
-          "itemId": {
-            "type": "string",
-            "format": "uuid"
+          "createdAt": {
+            "type": "string"
           },
-          "quantity": {
+          "description": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "equipmentSlot": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "id": {
+            "type": "string"
+          },
+          "inventoryType": {
+            "type": "string"
+          },
+          "levelReq": {
             "type": [
               "integer",
               "null"
             ],
             "format": "int32"
-          }
-        }
-      },
-      "GiveItemResponse": {
-        "type": "object",
-        "required": [
-          "ok"
-        ],
-        "properties": {
-          "ok": {
-            "type": "boolean"
-          }
+          },
+          "maxStack": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "name": {
+            "type": "string"
+          },
+          "rarity": {
+            "type": "string"
+          },
+          "slug": {
+            "type": "string"
+          },
+          "stats": {}
         }
       },
       "ItemSummary": {
@@ -691,7 +749,7 @@
           }
         }
       },
-      "ListItemsQuery": {
+      "ListAccountsQuery": {
         "type": "object",
         "properties": {
           "limit": {
@@ -701,6 +759,103 @@
           "page": {
             "type": "integer",
             "format": "int64"
+          },
+          "search": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
+      "ListAccountsResponse": {
+        "type": "object",
+        "required": [
+          "accounts",
+          "total",
+          "page",
+          "limit",
+          "totalPages"
+        ],
+        "properties": {
+          "accounts": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AccountSummary"
+            }
+          },
+          "limit": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "page": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "total": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "totalPages": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      },
+      "ListItemsQuery": {
+        "type": "object",
+        "properties": {
+          "class": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "equipmentSlot": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "inventoryType": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "levelMax": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int32"
+          },
+          "levelMin": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int32"
+          },
+          "limit": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "page": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "rarity": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "search": {
+            "type": [
+              "string",
+              "null"
+            ]
           }
         }
       },
@@ -723,6 +878,40 @@
           "limit": {
             "type": "integer",
             "format": "int64"
+          },
+          "page": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "total": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "totalPages": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      },
+      "ListMobsResponse": {
+        "type": "object",
+        "required": [
+          "mobs",
+          "total",
+          "page",
+          "limit",
+          "totalPages"
+        ],
+        "properties": {
+          "limit": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "mobs": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MobSummary"
+            }
           },
           "page": {
             "type": "integer",
@@ -765,6 +954,128 @@
           },
           "refreshToken": {
             "type": "string"
+          }
+        }
+      },
+      "MobDetailsResponse": {
+        "type": "object",
+        "required": [
+          "id",
+          "slug",
+          "name",
+          "mobType",
+          "createdAt"
+        ],
+        "properties": {
+          "createdAt": {
+            "type": "string"
+          },
+          "description": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "id": {
+            "type": "string"
+          },
+          "mobType": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "slug": {
+            "type": "string"
+          }
+        }
+      },
+      "MobSummary": {
+        "type": "object",
+        "required": [
+          "id",
+          "slug",
+          "name",
+          "mobType",
+          "createdAt"
+        ],
+        "properties": {
+          "createdAt": {
+            "type": "string"
+          },
+          "description": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "id": {
+            "type": "string"
+          },
+          "mobType": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "slug": {
+            "type": "string"
+          }
+        }
+      },
+      "PunishAccountRequest": {
+        "type": "object",
+        "required": [
+          "punishmentType"
+        ],
+        "properties": {
+          "punishmentType": {
+            "type": "string"
+          },
+          "reason": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "severity": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
+      "PunishAccountResponse": {
+        "type": "object",
+        "required": [
+          "id",
+          "punishmentType"
+        ],
+        "properties": {
+          "bannedAt": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "bannedReason": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "id": {
+            "type": "string"
+          },
+          "punishmentType": {
+            "type": "string"
+          },
+          "suspendedUntil": {
+            "type": [
+              "string",
+              "null"
+            ]
           }
         }
       },

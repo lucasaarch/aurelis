@@ -1,6 +1,0 @@
--- Your SQL goes here
-ALTER TABLE items
-    ALTER COLUMN level_req DROP NOT NULL,
-    ALTER COLUMN level_req DROP DEFAULT,
-    ALTER COLUMN stats DROP NOT NULL,
-    ALTER COLUMN stats DROP DEFAULT;

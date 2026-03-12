@@ -2,7 +2,6 @@ use diesel::deserialize::{self, FromSql, FromSqlRow};
 use diesel::expression::AsExpression;
 use diesel::pg::{Pg, PgValue};
 use diesel::serialize::{self, IsNull, Output, ToSql};
-use shared::models::currency_origin::CurrencyOrigin;
 use std::io::Write;
 
 #[derive(Debug, AsExpression, FromSqlRow)]
@@ -44,16 +43,17 @@ impl FromSql<crate::db::schema::sql_types::CurrencyOrigin, Pg> for CurrencyOrigi
     }
 }
 
-impl From<CurrencyOriginModel> for CurrencyOrigin {
-    fn from(model: CurrencyOriginModel) -> Self {
-        match model {
-            CurrencyOriginModel::Purchase => CurrencyOrigin::Purchase,
-            CurrencyOriginModel::Trade => CurrencyOrigin::Trade,
-            CurrencyOriginModel::Bonus => CurrencyOrigin::Bonus,
-            CurrencyOriginModel::Dungeon => CurrencyOrigin::Dungeon,
-            CurrencyOriginModel::Quest => CurrencyOrigin::Quest,
-            CurrencyOriginModel::Npc => CurrencyOrigin::Npc,
-        }
+impl std::fmt::Display for CurrencyOriginModel {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let value = match self {
+            CurrencyOriginModel::Purchase => "purchase",
+            CurrencyOriginModel::Trade => "trade",
+            CurrencyOriginModel::Bonus => "bonus",
+            CurrencyOriginModel::Dungeon => "dungeon",
+            CurrencyOriginModel::Quest => "quest",
+            CurrencyOriginModel::Npc => "npc",
+        };
+        f.write_str(value)
     }
 }
 

@@ -1,5 +1,7 @@
 import QueryProvider from "@/components/query-provider";
 import { Geist, Geist_Mono } from "next/font/google";
+import { Toaster } from "@/components/ui/sonner";
+import { TitleBar } from "@/components/title-bar";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -22,7 +24,11 @@ export default function RootLayout({
             <body
                 className={`${geistSans.variable} ${geistMono.variable} antialiased`}
             >
-                <QueryProvider>{children}</QueryProvider>
+                <QueryProvider>
+                    <TitleBar />
+                    {children}
+                    <Toaster />
+                </QueryProvider>
             </body>
         </html>
     );

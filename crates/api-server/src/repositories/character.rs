@@ -1,5 +1,4 @@
 use diesel::prelude::*;
-use shared::models::character::Character;
 
 use crate::{
     db::{
@@ -31,14 +30,31 @@ impl PgCharacterRepository {
         Self { db }
     }
 
-    pub async fn find_by_id(&self, character_id: uuid::Uuid) -> Result<Character, RepositoryError> {
+    pub async fn find_by_id(
+        &self,
+        character_id: uuid::Uuid,
+    ) -> Result<CharacterModel, RepositoryError> {
         self.run_blocking(move |conn| {
             use crate::db::schema::characters::dsl::*;
 
             characters
                 .filter(id.eq(character_id))
                 .first::<CharacterModel>(conn)
-                .map(|c| c.into())
+                .map_err(Into::into)
+        })
+        .await
+    }
+
+    pub async fn find_by_name(
+        &self,
+        character_name: String,
+    ) -> Result<CharacterModel, RepositoryError> {
+        self.run_blocking(move |conn| {
+            use crate::db::schema::characters::dsl::*;
+
+            characters
+                .filter(name.eq(character_name))
+                .first::<CharacterModel>(conn)
                 .map_err(Into::into)
         })
         .await
@@ -48,7 +64,7 @@ impl PgCharacterRepository {
         &self,
         account_id: uuid::Uuid,
         params: CreateCharacterParams,
-    ) -> Result<Character, RepositoryError> {
+    ) -> Result<CharacterModel, RepositoryError> {
         let model = CharacterModel::new(
             account_id,
             params.name,
@@ -61,11 +77,10 @@ impl PgCharacterRepository {
         self.run_blocking(move |conn| {
             use crate::models::inventory_type::InventoryTypeModel::*;
 
-            conn.transaction::<Character, RepositoryError, _>(|conn| {
-                let character: Character = diesel::insert_into(characters::table)
+            conn.transaction::<CharacterModel, RepositoryError, _>(|conn| {
+                let character: CharacterModel = diesel::insert_into(characters::table)
                     .values(&model)
-                    .get_result(conn)
-                    .map(|c: CharacterModel| c.into())?;
+                    .get_result(conn)?;
 
                 let inventories: Vec<InventoryModel> = [
                     Equipment, Accessory, Consumable, Material, QuestItem, Special,
@@ -102,14 +117,13 @@ impl PgCharacterRepository {
     pub async fn list_all_by_account(
         &self,
         acc_id: uuid::Uuid,
-    ) -> Result<Vec<Character>, RepositoryError> {
+    ) -> Result<Vec<CharacterModel>, RepositoryError> {
         self.run_blocking(move |conn| {
             use crate::db::schema::characters::dsl::*;
 
             characters
                 .filter(account_id.eq(acc_id))
                 .load::<CharacterModel>(conn)
-                .map(|rows| rows.into_iter().map(|r| r.into()).collect())
                 .map_err(Into::into)
         })
         .await

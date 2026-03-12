@@ -4,14 +4,13 @@ use crate::{
         Database,
         schema::{inventory, inventory_items},
     },
-    models::{inventory::InventoryModel, inventory_item::InventoryItemModel, item::ItemModel},
+    models::{
+        inventory::InventoryModel, inventory_detailed_item::InventoryDetailedItem,
+        inventory_item::InventoryItemModel, item::ItemModel,
+    },
     repositories::{Repository, RepositoryError},
 };
 use diesel::prelude::*;
-use shared::models::inventory::Inventory;
-use shared::models::inventory_detailed_item::InventoryDetailedItem;
-use shared::models::inventory_item::InventoryItem;
-use shared::models::item::Item as DomainItem;
 use uuid::Uuid;
 
 #[derive(Clone)]
@@ -34,7 +33,7 @@ impl PgInventoryRepository {
         &self,
         character_id: Uuid,
         inv_type: String,
-    ) -> Result<Inventory, RepositoryError> {
+    ) -> Result<InventoryModel, RepositoryError> {
         self.run_blocking(move |conn| {
             let inv_type = inv_type
                 .parse::<InventoryTypeModel>()
@@ -43,8 +42,7 @@ impl PgInventoryRepository {
             inventory::table
                 .filter(inventory::character_id.eq(character_id))
                 .filter(inventory::inventory_type.eq(inv_type))
-                .first(conn)
-                .map(|r: InventoryModel| r.into())
+                .first::<InventoryModel>(conn)
                 .map_err(Into::into)
         })
         .await
@@ -82,13 +80,12 @@ impl PgInventoryRepository {
         &self,
         inventory_id: Uuid,
         slot_index: i16,
-    ) -> Result<Option<InventoryItem>, RepositoryError> {
+    ) -> Result<Option<InventoryItemModel>, RepositoryError> {
         self.run_blocking(move |conn| {
             inventory_items::table
                 .filter(inventory_items::inventory_id.eq(inventory_id))
                 .filter(inventory_items::slot_index.eq(slot_index))
                 .first::<InventoryItemModel>(conn)
-                .map(|r| r.into())
                 .optional()
                 .map_err(Into::into)
         })
@@ -158,7 +155,7 @@ impl PgInventoryRepository {
         item_id: Uuid,
         slot_index: i16,
         quantity: i16,
-    ) -> Result<InventoryItem, RepositoryError> {
+    ) -> Result<InventoryItemModel, RepositoryError> {
         self.run_blocking(move |conn: &mut PgConnection| {
             let slot =
                 InventoryItemModel::new(inventory_id, None, Some(item_id), slot_index, quantity);
@@ -166,7 +163,6 @@ impl PgInventoryRepository {
             diesel::insert_into(inventory_items::table)
                 .values(&slot)
                 .get_result(conn)
-                .map(|m: InventoryItemModel| m.into())
                 .map_err(Into::into)
         })
         .await
@@ -201,11 +197,9 @@ impl PgInventoryRepository {
             let mut out: Vec<InventoryDetailedItem> = Vec::with_capacity(rows.len());
 
             for (im, opt_item) in rows.into_iter() {
-                let inv_item: InventoryItem = im.into();
                 match opt_item {
                     Some(item_model) => {
-                        let item: DomainItem = item_model.into();
-                        out.push(InventoryDetailedItem::from((inv_item, item)));
+                        out.push(InventoryDetailedItem::from((im, item_model)));
                     }
                     None => {
                         // Item missing for a slot — treat as inconsistent data

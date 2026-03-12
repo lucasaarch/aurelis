@@ -4401,20 +4401,11 @@ dependencies = [
 name = "shared"
 version = "0.1.0"
 dependencies = [
- "bigdecimal",
- "chrono",
  "prost",
  "protoc-bin-vendored",
- "regex",
- "serde",
- "serde_json",
  "tonic",
  "tonic-prost",
  "tonic-prost-build",
- "tonic-reflection",
- "utoipa",
- "uuid",
- "validator",
 ]
 
 [[package]]

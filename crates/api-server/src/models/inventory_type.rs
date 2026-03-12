@@ -2,7 +2,6 @@ use diesel::deserialize::{self, FromSql, FromSqlRow};
 use diesel::expression::AsExpression;
 use diesel::pg::{Pg, PgValue};
 use diesel::serialize::{self, IsNull, Output, ToSql};
-use shared::models::inventory_type::InventoryType;
 use std::io::Write;
 
 #[derive(Debug, Clone, AsExpression, FromSqlRow)]
@@ -44,16 +43,17 @@ impl FromSql<crate::db::schema::sql_types::InventoryType, Pg> for InventoryTypeM
     }
 }
 
-impl From<InventoryTypeModel> for InventoryType {
-    fn from(model: InventoryTypeModel) -> Self {
-        match model {
-            InventoryTypeModel::Equipment => InventoryType::Equipment,
-            InventoryTypeModel::Accessory => InventoryType::Accessory,
-            InventoryTypeModel::Consumable => InventoryType::Consumable,
-            InventoryTypeModel::Material => InventoryType::Material,
-            InventoryTypeModel::QuestItem => InventoryType::QuestItem,
-            InventoryTypeModel::Special => InventoryType::Special,
-        }
+impl std::fmt::Display for InventoryTypeModel {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let value = match self {
+            InventoryTypeModel::Equipment => "equipment",
+            InventoryTypeModel::Accessory => "accessory",
+            InventoryTypeModel::Consumable => "consumable",
+            InventoryTypeModel::Material => "material",
+            InventoryTypeModel::QuestItem => "quest_item",
+            InventoryTypeModel::Special => "special",
+        };
+        f.write_str(value)
     }
 }
 

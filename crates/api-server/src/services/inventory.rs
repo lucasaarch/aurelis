@@ -1,5 +1,5 @@
+use crate::models::inventory_detailed_item::InventoryDetailedItem;
 use anyhow::anyhow;
-use shared::models::inventory_detailed_item::InventoryDetailedItem;
 use uuid::Uuid;
 
 use crate::{error::AppError, repositories::inventory::PgInventoryRepository};

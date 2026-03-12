@@ -1,5 +1,5 @@
+use crate::models::account::AccountModel;
 use chrono::Utc;
-use shared::models::account::Account;
 
 use crate::error::AppError;
 use crate::repositories::account::{CreateAccountParams, PgAccountRepository};
@@ -51,7 +51,7 @@ impl AuthService {
         &self,
         token: &str,
         context: TokenContext,
-    ) -> Result<Account, AppError> {
+    ) -> Result<AccountModel, AppError> {
         let claims = self.jwt_service.verify_with_context(token, context)?;
 
         self.repository
@@ -60,7 +60,7 @@ impl AuthService {
             .map_err(|_| AppError::Unauthorized("Invalid token".to_string()))
     }
 
-    pub async fn register(&self, params: RegisterParams) -> Result<Account, AppError> {
+    pub async fn register(&self, params: RegisterParams) -> Result<AccountModel, AppError> {
         let password_hash = self.hash_service.hash(&params.password)?;
 
         self.repository
@@ -73,13 +73,15 @@ impl AuthService {
     }
 
     pub async fn login(&self, params: LoginParams) -> Result<LoginResult, AppError> {
-        let (account, password_hash) = self
+        let account = self
             .repository
             .find_by_email_with_hash(&params.email)
             .await
             .map_err(|_| AppError::Unauthorized("Email or password is incorrect".to_string()))?;
 
-        let valid = self.hash_service.verify(&params.password, &password_hash)?;
+        let valid = self
+            .hash_service
+            .verify(&params.password, &account.password_hash)?;
 
         if !valid {
             return Err(AppError::Unauthorized(
@@ -136,7 +138,7 @@ impl AuthService {
         })
     }
 
-    fn check_if_can_perform_game_login(&self, account: &Account) -> Result<(), AppError> {
+    fn check_if_can_perform_game_login(&self, account: &AccountModel) -> Result<(), AppError> {
         if account.banned_at.is_some() {
             let reason = account
                 .banned_reason

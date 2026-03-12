@@ -2,7 +2,6 @@ use diesel::deserialize::{self, FromSql, FromSqlRow};
 use diesel::expression::AsExpression;
 use diesel::pg::{Pg, PgValue};
 use diesel::serialize::{self, IsNull, Output, ToSql};
-use shared::models::quest_status::QuestStatus;
 use std::io::Write;
 
 #[derive(Debug, AsExpression, FromSqlRow)]
@@ -35,13 +34,14 @@ impl FromSql<crate::db::schema::sql_types::QuestStatus, Pg> for QuestStatusModel
     }
 }
 
-impl From<QuestStatusModel> for QuestStatus {
-    fn from(model: QuestStatusModel) -> Self {
-        match model {
-            QuestStatusModel::Available => QuestStatus::Available,
-            QuestStatusModel::InProgress => QuestStatus::InProgress,
-            QuestStatusModel::Completed => QuestStatus::Completed,
-        }
+impl std::fmt::Display for QuestStatusModel {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let value = match self {
+            QuestStatusModel::Available => "available",
+            QuestStatusModel::InProgress => "in_progress",
+            QuestStatusModel::Completed => "completed",
+        };
+        f.write_str(value)
     }
 }
 

@@ -2,10 +2,9 @@ use diesel::deserialize::{self, FromSql, FromSqlRow};
 use diesel::expression::AsExpression;
 use diesel::pg::{Pg, PgValue};
 use diesel::serialize::{self, IsNull, Output, ToSql};
-use shared::models::character_class::CharacterClass;
 use std::io::Write;
 
-#[derive(Debug, AsExpression, FromSqlRow)]
+#[derive(Debug, Clone, AsExpression, FromSqlRow)]
 #[diesel(sql_type = crate::db::schema::sql_types::CharacterClass)]
 pub enum CharacterClassModel {
     Kael,
@@ -35,23 +34,14 @@ impl FromSql<crate::db::schema::sql_types::CharacterClass, Pg> for CharacterClas
     }
 }
 
-impl From<CharacterClassModel> for CharacterClass {
-    fn from(model: CharacterClassModel) -> Self {
-        match model {
-            CharacterClassModel::Kael => CharacterClass::Kael,
-            CharacterClassModel::Rin => CharacterClass::Rin,
-            CharacterClassModel::Sirena => CharacterClass::Sirena,
-        }
-    }
-}
-
-impl From<CharacterClass> for CharacterClassModel {
-    fn from(class: CharacterClass) -> Self {
-        match class {
-            CharacterClass::Kael => CharacterClassModel::Kael,
-            CharacterClass::Rin => CharacterClassModel::Rin,
-            CharacterClass::Sirena => CharacterClassModel::Sirena,
-        }
+impl std::fmt::Display for CharacterClassModel {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let value = match self {
+            CharacterClassModel::Kael => "kael",
+            CharacterClassModel::Rin => "rin",
+            CharacterClassModel::Sirena => "sirena",
+        };
+        f.write_str(value)
     }
 }
 

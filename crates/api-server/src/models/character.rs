@@ -1,6 +1,5 @@
 use chrono::{NaiveDateTime, Utc};
 use diesel::prelude::{Insertable, Queryable};
-use shared::models::character::Character;
 use uuid::Uuid;
 
 use crate::models::{
@@ -36,23 +35,6 @@ impl CharacterModel {
             credits: 0,
             created_at: now,
             updated_at: now,
-        }
-    }
-}
-
-impl From<CharacterModel> for Character {
-    fn from(model: CharacterModel) -> Self {
-        Self {
-            id: model.id,
-            account_id: model.account_id,
-            name: model.name,
-            class: model.class.into(),
-            level: model.level,
-            experience: model.experience,
-            location: model.location.into(),
-            credits: model.credits,
-            created_at: model.created_at,
-            updated_at: model.updated_at,
         }
     }
 }

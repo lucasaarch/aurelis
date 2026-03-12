@@ -1,6 +1,5 @@
 use chrono::{NaiveDateTime, Utc};
 use diesel::prelude::{Insertable, Queryable};
-use shared::models::currency_transaction::CurrencyTransaction;
 use uuid::Uuid;
 
 use crate::models::currency_origin::CurrencyOriginModel;
@@ -39,22 +38,6 @@ impl CurrencyTransactionModel {
             origin,
             reference_id,
             created_at: Utc::now().naive_utc(),
-        }
-    }
-}
-
-impl From<CurrencyTransactionModel> for CurrencyTransaction {
-    fn from(model: CurrencyTransactionModel) -> Self {
-        Self {
-            id: model.id,
-            account_id: model.account_id,
-            character_id: model.character_id,
-            currency: model.currency,
-            amount: model.amount,
-            balance_after: model.balance_after,
-            origin: model.origin.into(),
-            reference_id: model.reference_id,
-            created_at: model.created_at,
         }
     }
 }

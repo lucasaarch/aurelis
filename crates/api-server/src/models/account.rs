@@ -1,6 +1,5 @@
 use chrono::{NaiveDateTime, Utc};
 use diesel::prelude::{Insertable, Queryable};
-use shared::models::account::Account;
 use uuid::Uuid;
 
 #[derive(Queryable, Insertable)]
@@ -100,30 +99,5 @@ impl AccountModel {
     pub fn verify_email(&mut self) {
         self.email_verified = true;
         self.updated_at = Utc::now().naive_utc();
-    }
-}
-
-impl From<AccountModel> for Account {
-    fn from(model: AccountModel) -> Self {
-        Account {
-            id: model.id,
-            email: model.email,
-            max_characters: model.max_characters,
-            shared_storage_enabled: model.shared_storage_enabled,
-            shared_storage_capacity: model.shared_storage_capacity,
-            cash: model.cash,
-            stored_credits: model.stored_credits,
-            is_admin: model.is_admin,
-            god_mode: model.god_mode,
-            email_verified: model.email_verified,
-            email_verified_at: model.email_verified_at,
-            banned_at: model.banned_at,
-            banned_reason: model.banned_reason,
-            suspended_until: model.suspended_until,
-            chat_restricted_until: model.chat_restricted_until,
-            created_at: model.created_at,
-            updated_at: model.updated_at,
-            deleted_at: model.deleted_at,
-        }
     }
 }

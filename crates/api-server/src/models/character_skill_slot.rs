@@ -1,5 +1,4 @@
 use diesel::prelude::{Insertable, Queryable};
-use shared::models::character_skill_slot::CharacterSkillSlot;
 use uuid::Uuid;
 
 #[derive(Queryable, Insertable)]
@@ -16,16 +15,6 @@ impl CharacterSkillSlotModel {
             character_id,
             slot,
             skill_id,
-        }
-    }
-}
-
-impl From<CharacterSkillSlotModel> for CharacterSkillSlot {
-    fn from(model: CharacterSkillSlotModel) -> Self {
-        Self {
-            character_id: model.character_id,
-            slot: model.slot,
-            skill_id: model.skill_id,
         }
     }
 }

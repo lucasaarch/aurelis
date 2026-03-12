@@ -1,6 +1,5 @@
 use chrono::NaiveDateTime;
 use diesel::prelude::{Insertable, Queryable};
-use shared::models::character_quest::CharacterQuest;
 use uuid::Uuid;
 
 use crate::models::quest_status::QuestStatusModel;
@@ -25,19 +24,6 @@ impl CharacterQuestModel {
             status: QuestStatusModel::Available,
             started_at: None,
             completed_at: None,
-        }
-    }
-}
-
-impl From<CharacterQuestModel> for CharacterQuest {
-    fn from(model: CharacterQuestModel) -> Self {
-        Self {
-            id: model.id,
-            character_id: model.character_id,
-            quest_id: model.quest_id,
-            status: model.status.into(),
-            started_at: model.started_at,
-            completed_at: model.completed_at,
         }
     }
 }

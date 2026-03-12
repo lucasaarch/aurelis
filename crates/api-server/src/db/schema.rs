@@ -26,10 +26,6 @@ pub mod sql_types {
     pub struct ItemRarity;
 
     #[derive(diesel::query_builder::QueryId, Clone, diesel::sql_types::SqlType)]
-    #[diesel(postgres_type(name = "mob_type"))]
-    pub struct MobType;
-
-    #[derive(diesel::query_builder::QueryId, Clone, diesel::sql_types::SqlType)]
     #[diesel(postgres_type(name = "quest_status"))]
     pub struct QuestStatus;
 }
@@ -158,21 +154,12 @@ diesel::table! {
     dungeon_history (id) {
         id -> Uuid,
         character_id -> Uuid,
-        #[max_length = 32]
-        dungeon_id -> Varchar,
+        #[max_length = 64]
+        dungeon_slug -> Varchar,
         hard_mode -> Bool,
         completed_at -> Timestamptz,
         xp_gained -> Int4,
         duration_secs -> Nullable<Int4>,
-    }
-}
-
-diesel::table! {
-    dungeon_mobs (id) {
-        id -> Uuid,
-        mob_id -> Uuid,
-        #[max_length = 32]
-        dungeon_id -> Varchar,
     }
 }
 
@@ -294,27 +281,14 @@ diesel::table! {
 }
 
 diesel::table! {
-    mob_drop_rates (id) {
+    mob_kills (id) {
         id -> Uuid,
-        mob_id -> Uuid,
-        item_id -> Uuid,
-        drop_chance -> Numeric,
-    }
-}
-
-diesel::table! {
-    use diesel::sql_types::*;
-    use super::sql_types::MobType;
-
-    mobs (id) {
-        id -> Uuid,
+        character_id -> Uuid,
         #[max_length = 64]
-        slug -> Varchar,
+        mob_slug -> Varchar,
         #[max_length = 64]
-        name -> Varchar,
-        description -> Nullable<Text>,
-        mob_type -> MobType,
-        created_at -> Timestamptz,
+        dungeon_slug -> Nullable<Varchar>,
+        killed_at -> Timestamptz,
     }
 }
 
@@ -366,7 +340,6 @@ diesel::joinable!(characters -> accounts (account_id));
 diesel::joinable!(currency_transactions -> accounts (account_id));
 diesel::joinable!(currency_transactions -> characters (character_id));
 diesel::joinable!(dungeon_history -> characters (character_id));
-diesel::joinable!(dungeon_mobs -> mobs (mob_id));
 diesel::joinable!(equipment -> characters (character_id));
 diesel::joinable!(equipment -> item_instances (item_instance_id));
 diesel::joinable!(evolution_steps -> evolution_lines (line_id));
@@ -377,8 +350,7 @@ diesel::joinable!(inventory_items -> items (item_id));
 diesel::joinable!(item_instances -> accounts (owner_account_id));
 diesel::joinable!(item_instances -> characters (owner_character_id));
 diesel::joinable!(item_instances -> items (item_id));
-diesel::joinable!(mob_drop_rates -> items (item_id));
-diesel::joinable!(mob_drop_rates -> mobs (mob_id));
+diesel::joinable!(mob_kills -> characters (character_id));
 diesel::joinable!(skills -> evolution_lines (line_id));
 
 diesel::allow_tables_to_appear_in_same_query!(
@@ -391,7 +363,6 @@ diesel::allow_tables_to_appear_in_same_query!(
     characters,
     currency_transactions,
     dungeon_history,
-    dungeon_mobs,
     equipment,
     evolution_lines,
     evolution_steps,
@@ -400,8 +371,7 @@ diesel::allow_tables_to_appear_in_same_query!(
     item_instance_gems,
     item_instances,
     items,
-    mob_drop_rates,
-    mobs,
+    mob_kills,
     quests,
     skills,
 );

@@ -1,6 +1,5 @@
 use chrono::{NaiveDateTime, Utc};
 use diesel::prelude::{Insertable, Queryable};
-use shared::models::quest::Quest;
 use uuid::Uuid;
 
 use crate::models::character_location::CharacterLocationModel;
@@ -30,19 +29,6 @@ impl QuestModel {
             city,
             level_req,
             created_at: Utc::now().naive_utc(),
-        }
-    }
-}
-
-impl From<QuestModel> for Quest {
-    fn from(model: QuestModel) -> Self {
-        Self {
-            id: model.id,
-            name: model.name,
-            description: model.description,
-            city: model.city.map(Into::into),
-            level_req: model.level_req,
-            created_at: model.created_at,
         }
     }
 }

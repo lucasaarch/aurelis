@@ -2,10 +2,9 @@ use diesel::deserialize::{self, FromSql, FromSqlRow};
 use diesel::expression::AsExpression;
 use diesel::pg::{Pg, PgValue};
 use diesel::serialize::{self, IsNull, Output, ToSql};
-use shared::models::equipment_slot::EquipmentSlot;
 use std::io::Write;
 
-#[derive(Debug, AsExpression, FromSqlRow)]
+#[derive(Debug, Clone, AsExpression, FromSqlRow)]
 #[diesel(sql_type = crate::db::schema::sql_types::EquipmentSlotType)]
 pub enum EquipmentSlotModel {
     Weapon,
@@ -80,28 +79,29 @@ impl FromSql<crate::db::schema::sql_types::EquipmentSlotType, Pg> for EquipmentS
     }
 }
 
-impl From<EquipmentSlotModel> for EquipmentSlot {
-    fn from(model: EquipmentSlotModel) -> Self {
-        match model {
-            EquipmentSlotModel::Weapon => EquipmentSlot::Weapon,
-            EquipmentSlotModel::Head => EquipmentSlot::Head,
-            EquipmentSlotModel::Chest => EquipmentSlot::Chest,
-            EquipmentSlotModel::Legs => EquipmentSlot::Legs,
-            EquipmentSlotModel::Gloves => EquipmentSlot::Gloves,
-            EquipmentSlotModel::Shoes => EquipmentSlot::Shoes,
-            EquipmentSlotModel::AccRing1 => EquipmentSlot::AccRing1,
-            EquipmentSlotModel::AccRing2 => EquipmentSlot::AccRing2,
-            EquipmentSlotModel::AccNecklace => EquipmentSlot::AccNecklace,
-            EquipmentSlotModel::AccEarrings => EquipmentSlot::AccEarrings,
-            EquipmentSlotModel::AccArm => EquipmentSlot::AccArm,
-            EquipmentSlotModel::AccFaceBottom => EquipmentSlot::AccFaceBottom,
-            EquipmentSlotModel::AccFaceMiddle => EquipmentSlot::AccFaceMiddle,
-            EquipmentSlotModel::AccFaceTop => EquipmentSlot::AccFaceTop,
-            EquipmentSlotModel::AccBottomPiece => EquipmentSlot::AccBottomPiece,
-            EquipmentSlotModel::AccTopPiece => EquipmentSlot::AccTopPiece,
-            EquipmentSlotModel::AccWeapon => EquipmentSlot::AccWeapon,
-            EquipmentSlotModel::AccSupportUnit => EquipmentSlot::AccSupportUnit,
-        }
+impl std::fmt::Display for EquipmentSlotModel {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let value = match self {
+            EquipmentSlotModel::Weapon => "weapon",
+            EquipmentSlotModel::Head => "head",
+            EquipmentSlotModel::Chest => "chest",
+            EquipmentSlotModel::Legs => "legs",
+            EquipmentSlotModel::Gloves => "gloves",
+            EquipmentSlotModel::Shoes => "shoes",
+            EquipmentSlotModel::AccRing1 => "acc_ring_1",
+            EquipmentSlotModel::AccRing2 => "acc_ring_2",
+            EquipmentSlotModel::AccNecklace => "acc_necklace",
+            EquipmentSlotModel::AccEarrings => "acc_earrings",
+            EquipmentSlotModel::AccArm => "acc_arm",
+            EquipmentSlotModel::AccFaceBottom => "acc_face_bottom",
+            EquipmentSlotModel::AccFaceMiddle => "acc_face_middle",
+            EquipmentSlotModel::AccFaceTop => "acc_face_top",
+            EquipmentSlotModel::AccBottomPiece => "acc_bottom_piece",
+            EquipmentSlotModel::AccTopPiece => "acc_top_piece",
+            EquipmentSlotModel::AccWeapon => "acc_weapon",
+            EquipmentSlotModel::AccSupportUnit => "acc_support_unit",
+        };
+        f.write_str(value)
     }
 }
 

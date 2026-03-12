@@ -39,7 +39,7 @@ export function LoginForm({ form, onSubmit }: LoginFormProps) {
                             htmlFor={field.name}
                             className="block text-[0.7rem] font-semibold uppercase tracking-[0.15em] text-amber-600/70"
                         >
-                            E-mail
+                            Email
                         </FieldLabel>
                         <Input
                             {...field}
@@ -69,7 +69,7 @@ export function LoginForm({ form, onSubmit }: LoginFormProps) {
                             htmlFor={field.name}
                             className="block text-[0.7rem] font-semibold uppercase tracking-[0.15em] text-amber-600/70"
                         >
-                            Senha
+                            Password
                         </FieldLabel>
                         <div className="relative">
                             <Input
@@ -87,8 +87,8 @@ export function LoginForm({ form, onSubmit }: LoginFormProps) {
                                 className="absolute inset-y-0 right-0 flex items-center px-3 text-amber-800/40 hover:text-amber-600/60 transition-colors"
                                 aria-label={
                                     showPassword
-                                        ? "Ocultar senha"
-                                        : "Mostrar senha"
+                                        ? "Hide password"
+                                        : "Show password"
                                 }
                             >
                                 {showPassword ? (
@@ -112,7 +112,7 @@ export function LoginForm({ form, onSubmit }: LoginFormProps) {
                 type="submit"
                 disabled={isLoading}
                 className={[
-                    "relative mt-2 w-full overflow-hidden rounded-sm py-2.5",
+                    "relative mt-2 w-full overflow-hidden rounded-none py-2.5",
                     "border border-amber-600/30 bg-linear-to-b from-amber-900/30 to-amber-950/40",
                     "text-[0.75rem] font-semibold uppercase tracking-[0.2em] text-amber-300/80",
                     "transition-all duration-200",
@@ -125,7 +125,7 @@ export function LoginForm({ form, onSubmit }: LoginFormProps) {
                 <div className="absolute left-[15%] right-[15%] top-0 h-px bg-linear-to-r from-transparent via-amber-500/30 to-transparent" />
                 <span className="flex items-center justify-center gap-2">
                     {isLoading && <Loader2 className="size-3.5 animate-spin" />}
-                    {isLoading ? "Entrando…" : "Entrar"}
+                    {isLoading ? "Signing in…" : "Sign in"}
                 </span>
             </Button>
         </form>

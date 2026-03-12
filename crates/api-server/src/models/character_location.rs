@@ -2,7 +2,6 @@ use diesel::deserialize::{self, FromSql, FromSqlRow};
 use diesel::expression::AsExpression;
 use diesel::pg::{Pg, PgValue};
 use diesel::serialize::{self, IsNull, Output, ToSql};
-use shared::models::character_location::CharacterLocation;
 use std::io::Write;
 
 #[derive(Debug, AsExpression, FromSqlRow)]
@@ -38,13 +37,14 @@ impl FromSql<crate::db::schema::sql_types::CharacterLocation, Pg> for CharacterL
     }
 }
 
-impl From<CharacterLocationModel> for CharacterLocation {
-    fn from(model: CharacterLocationModel) -> Self {
-        match model {
-            CharacterLocationModel::Aurelis => CharacterLocation::Aurelis,
-            CharacterLocationModel::Volcanis => CharacterLocation::Volcanis,
-            CharacterLocationModel::Aquavale => CharacterLocation::Aquavale,
-            CharacterLocationModel::Sylvandar => CharacterLocation::Sylvandar,
-        }
+impl std::fmt::Display for CharacterLocationModel {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let value = match self {
+            CharacterLocationModel::Aurelis => "aurelis",
+            CharacterLocationModel::Volcanis => "volcanis",
+            CharacterLocationModel::Aquavale => "aquavale",
+            CharacterLocationModel::Sylvandar => "sylvandar",
+        };
+        f.write_str(value)
     }
 }

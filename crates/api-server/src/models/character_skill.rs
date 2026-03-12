@@ -1,6 +1,5 @@
 use chrono::{NaiveDateTime, Utc};
 use diesel::prelude::{Insertable, Queryable};
-use shared::models::character_skill::CharacterSkill;
 use uuid::Uuid;
 
 #[derive(Queryable, Insertable)]
@@ -17,16 +16,6 @@ impl CharacterSkillModel {
             character_id,
             skill_id,
             unlocked_at: Utc::now().naive_utc(),
-        }
-    }
-}
-
-impl From<CharacterSkillModel> for CharacterSkill {
-    fn from(model: CharacterSkillModel) -> Self {
-        Self {
-            character_id: model.character_id,
-            skill_id: model.skill_id,
-            unlocked_at: model.unlocked_at,
         }
     }
 }

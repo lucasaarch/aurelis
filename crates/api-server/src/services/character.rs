@@ -1,7 +1,7 @@
-use shared::models::character::Character;
 use uuid::Uuid;
 
 use crate::error::AppError;
+use crate::models::character::CharacterModel;
 use crate::repositories::account::PgAccountRepository;
 use crate::repositories::character::{CreateCharacterParams, PgCharacterRepository};
 
@@ -31,7 +31,7 @@ impl CharacterService {
         &self,
         account_id: Uuid,
         input: CreateCharacterInput,
-    ) -> Result<Character, AppError> {
+    ) -> Result<CharacterModel, AppError> {
         let account = match self.account_repository.find_by_id(account_id).await {
             Ok(a) => a,
             Err(_) => {
@@ -69,7 +69,7 @@ impl CharacterService {
             .map_err(Into::into)
     }
 
-    pub async fn list_all(&self, account_id: Uuid) -> Result<Vec<Character>, AppError> {
+    pub async fn list_all(&self, account_id: Uuid) -> Result<Vec<CharacterModel>, AppError> {
         match self
             .character_repository
             .list_all_by_account(account_id)
@@ -78,6 +78,13 @@ impl CharacterService {
             Ok(v) => Ok(v),
             Err(_) => Err(AppError::Internal(anyhow::anyhow!("DB error"))),
         }
+    }
+
+    pub async fn find_by_name(&self, name: String) -> Result<CharacterModel, AppError> {
+        self.character_repository
+            .find_by_name(name)
+            .await
+            .map_err(Into::into)
     }
 
     pub async fn verify_ownership(

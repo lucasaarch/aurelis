@@ -1,15 +1,15 @@
 use std::sync::Arc;
 
+use crate::dto::auth::LoginRequest;
+use crate::dto::auth::LoginResponse;
+use crate::dto::auth::RefreshRequest;
+use crate::dto::auth::RefreshResponse;
+use crate::dto::auth::RegisterRequest;
 use axum::Json;
 use axum::Router;
 use axum::extract::State;
 use axum::http::StatusCode;
 use axum::routing::post;
-use shared::dto::auth::LoginRequest;
-use shared::dto::auth::LoginResponse;
-use shared::dto::auth::RefreshRequest;
-use shared::dto::auth::RefreshResponse;
-use shared::dto::auth::RegisterRequest;
 
 use crate::app::AppState;
 use crate::error::ErrorResponse;

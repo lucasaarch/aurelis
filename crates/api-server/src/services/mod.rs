@@ -5,5 +5,3 @@ pub mod hash;
 pub mod inventory;
 pub mod item;
 pub mod jwt;
-pub mod mob;
-pub mod mob_drop_rate;

@@ -2,10 +2,9 @@ use diesel::deserialize::{self, FromSql, FromSqlRow};
 use diesel::expression::AsExpression;
 use diesel::pg::{Pg, PgValue};
 use diesel::serialize::{self, IsNull, Output, ToSql};
-use shared::models::item_rarity::ItemRarity;
 use std::io::Write;
 
-#[derive(Debug, AsExpression, FromSqlRow)]
+#[derive(Debug, Clone, AsExpression, FromSqlRow)]
 #[diesel(sql_type = crate::db::schema::sql_types::ItemRarity)]
 pub enum ItemRarityModel {
     Common,
@@ -38,14 +37,15 @@ impl FromSql<crate::db::schema::sql_types::ItemRarity, Pg> for ItemRarityModel {
     }
 }
 
-impl From<ItemRarityModel> for ItemRarity {
-    fn from(model: ItemRarityModel) -> Self {
-        match model {
-            ItemRarityModel::Common => ItemRarity::Common,
-            ItemRarityModel::Uncommon => ItemRarity::Uncommon,
-            ItemRarityModel::Rare => ItemRarity::Rare,
-            ItemRarityModel::Epic => ItemRarity::Epic,
-        }
+impl std::fmt::Display for ItemRarityModel {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let value = match self {
+            ItemRarityModel::Common => "common",
+            ItemRarityModel::Uncommon => "uncommon",
+            ItemRarityModel::Rare => "rare",
+            ItemRarityModel::Epic => "epic",
+        };
+        f.write_str(value)
     }
 }
 

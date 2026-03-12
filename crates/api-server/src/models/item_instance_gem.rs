@@ -1,6 +1,5 @@
 use chrono::{NaiveDateTime, Utc};
 use diesel::prelude::{Insertable, Queryable};
-use shared::models::item_instance_gem::ItemInstanceGem;
 use uuid::Uuid;
 
 #[derive(Queryable, Insertable)]
@@ -21,18 +20,6 @@ impl ItemInstanceGemModel {
             slot_index,
             gem_instance_id,
             socketed_at: Utc::now().naive_utc(),
-        }
-    }
-}
-
-impl From<ItemInstanceGemModel> for ItemInstanceGem {
-    fn from(model: ItemInstanceGemModel) -> Self {
-        Self {
-            id: model.id,
-            item_instance_id: model.item_instance_id,
-            slot_index: model.slot_index,
-            gem_instance_id: model.gem_instance_id,
-            socketed_at: model.socketed_at,
         }
     }
 }

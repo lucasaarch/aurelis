@@ -1,5 +1,4 @@
 use diesel::prelude::{Insertable, Queryable};
-use shared::models::character_consumable_slot::CharacterConsumableSlot;
 use uuid::Uuid;
 
 #[derive(Queryable, Insertable)]
@@ -16,16 +15,6 @@ impl CharacterConsumableSlotModel {
             character_id,
             slot,
             item_instance_id,
-        }
-    }
-}
-
-impl From<CharacterConsumableSlotModel> for CharacterConsumableSlot {
-    fn from(model: CharacterConsumableSlotModel) -> Self {
-        Self {
-            character_id: model.character_id,
-            slot: model.slot,
-            item_instance_id: model.item_instance_id,
         }
     }
 }

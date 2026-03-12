@@ -1,11 +1,8 @@
 use tonic::{Request, Response, Status};
 
-use shared::{
-    proto::inventory::{
-        DeleteItemRequest, DeleteItemResponse, InventoryItem as ProtoInventoryItem,
-        ListItemsRequest, ListItemsResponse, MoveItemRequest, MoveItemResponse,
-    },
-    utils::datetime::format_naive_datetime,
+use shared::proto::inventory::{
+    DeleteItemRequest, DeleteItemResponse, InventoryItem as ProtoInventoryItem, ListItemsRequest,
+    ListItemsResponse, MoveItemRequest, MoveItemResponse,
 };
 
 use crate::{
@@ -13,7 +10,10 @@ use crate::{
         auth::AuthService, character::CharacterService, inventory::InventoryService,
         jwt::TokenContext,
     },
-    utils::{extractors::extract_access_token_from_metadata, parsers::parse_uuid},
+    utils::{
+        datetime::format_naive_datetime, extractors::extract_access_token_from_metadata,
+        parsers::parse_uuid,
+    },
 };
 
 pub struct GrpcInventoryServiceImpl {
@@ -142,12 +142,7 @@ impl shared::proto::inventory::inventory_service_server::InventoryService
                     name: detailed.name.clone(),
                     description: detailed.description.clone().unwrap_or_default(),
                     icon: String::new(),
-                    rarity: match detailed.rarity {
-                        shared::models::item_rarity::ItemRarity::Common => "common".to_string(),
-                        shared::models::item_rarity::ItemRarity::Uncommon => "uncommon".to_string(),
-                        shared::models::item_rarity::ItemRarity::Rare => "rare".to_string(),
-                        shared::models::item_rarity::ItemRarity::Epic => "epic".to_string(),
-                    },
+                    rarity: detailed.rarity.to_string(),
                     max_stack: detailed.max_stack as i32,
                     base_stats: std::collections::HashMap::new(),
                     attributes: vec![],

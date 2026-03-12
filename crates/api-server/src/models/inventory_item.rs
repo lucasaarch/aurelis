@@ -1,6 +1,5 @@
 use chrono::{NaiveDateTime, Utc};
 use diesel::prelude::{Insertable, Queryable};
-use shared::models::inventory_item::InventoryItem;
 use uuid::Uuid;
 
 #[derive(Queryable, Insertable)]
@@ -31,20 +30,6 @@ impl InventoryItemModel {
             slot_index,
             quantity,
             acquired_at: Utc::now().naive_utc(),
-        }
-    }
-}
-
-impl From<InventoryItemModel> for InventoryItem {
-    fn from(model: InventoryItemModel) -> Self {
-        Self {
-            id: model.id,
-            inventory_id: model.inventory_id,
-            item_instance_id: model.item_instance_id,
-            item_id: model.item_id,
-            slot_index: model.slot_index,
-            quantity: model.quantity,
-            acquired_at: model.acquired_at,
         }
     }
 }
