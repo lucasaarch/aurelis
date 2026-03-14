@@ -1,0 +1,9 @@
+[package]
+name = "game-client"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+bevy = { version = "0.18.1", default-features = false }
+bevy_renet = { version = "4.0.1", features = ["netcode"] }
+shared = { path = "../shared" }

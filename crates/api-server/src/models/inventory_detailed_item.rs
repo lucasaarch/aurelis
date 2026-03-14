@@ -1,11 +1,8 @@
 use chrono::NaiveDateTime;
-use serde_json::Value;
 use uuid::Uuid;
 
 use crate::models::{
-    character_class::CharacterClassModel, equipment_slot::EquipmentSlotModel,
     inventory_item::InventoryItemModel, inventory_type::InventoryTypeModel, item::ItemModel,
-    item_rarity::ItemRarityModel,
 };
 
 #[derive(Clone)]
@@ -21,16 +18,8 @@ pub struct InventoryDetailedItem {
 
     // Item fields
     pub slug: String,
-    pub name: String,
-    pub class: Option<CharacterClassModel>,
-    pub description: Option<String>,
-    pub rarity: ItemRarityModel,
-    pub equipment_slot: Option<EquipmentSlotModel>,
-    pub level_req: Option<i16>,
-    pub stats: Option<Value>,
-    pub created_at: NaiveDateTime,
     pub inventory_type: InventoryTypeModel,
-    pub max_stack: i16,
+    pub created_at: NaiveDateTime,
 }
 
 impl From<(InventoryItemModel, ItemModel)> for InventoryDetailedItem {
@@ -43,18 +32,9 @@ impl From<(InventoryItemModel, ItemModel)> for InventoryDetailedItem {
             slot_index: inv_item.slot_index,
             quantity: inv_item.quantity,
             acquired_at: inv_item.acquired_at,
-
             slug: item.slug,
-            name: item.name,
-            class: item.class,
-            description: item.description,
-            rarity: item.rarity,
-            equipment_slot: item.equipment_slot,
-            level_req: item.level_req,
-            stats: item.stats,
-            created_at: item.created_at,
             inventory_type: item.inventory_type,
-            max_stack: item.max_stack,
+            created_at: item.created_at,
         }
     }
 }

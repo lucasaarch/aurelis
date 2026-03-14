@@ -45,7 +45,7 @@ impl GrpcCharacterService for GrpcCharacterServiceImpl {
                     id: c.id.into(),
                     name: c.name,
                     level: c.level.into(),
-                    class: c.class.to_string(),
+                    class: c.current_class_slug,
                     created_at: format_naive_datetime(&c.created_at),
                     updated_at: format_naive_datetime(&c.updated_at),
                 })
@@ -81,7 +81,7 @@ impl GrpcCharacterService for GrpcCharacterServiceImpl {
                 id: c.id.into(),
                 name: c.name,
                 level: c.level.into(),
-                class: c.class.to_string(),
+                class: c.current_class_slug,
                 created_at: format_naive_datetime(&c.created_at),
                 updated_at: format_naive_datetime(&c.updated_at),
             })?;

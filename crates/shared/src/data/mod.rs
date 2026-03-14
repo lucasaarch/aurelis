@@ -1,3 +1,3 @@
-pub mod classes;
-pub mod dungeons;
-pub mod items;
+pub mod characters;
+pub mod cities;
+pub mod quests;

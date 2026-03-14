@@ -2,14 +2,6 @@
 
 pub mod sql_types {
     #[derive(diesel::query_builder::QueryId, Clone, diesel::sql_types::SqlType)]
-    #[diesel(postgres_type(name = "character_class"))]
-    pub struct CharacterClass;
-
-    #[derive(diesel::query_builder::QueryId, Clone, diesel::sql_types::SqlType)]
-    #[diesel(postgres_type(name = "character_location"))]
-    pub struct CharacterLocation;
-
-    #[derive(diesel::query_builder::QueryId, Clone, diesel::sql_types::SqlType)]
     #[diesel(postgres_type(name = "currency_origin"))]
     pub struct CurrencyOrigin;
 
@@ -20,10 +12,6 @@ pub mod sql_types {
     #[derive(diesel::query_builder::QueryId, Clone, diesel::sql_types::SqlType)]
     #[diesel(postgres_type(name = "inventory_type"))]
     pub struct InventoryType;
-
-    #[derive(diesel::query_builder::QueryId, Clone, diesel::sql_types::SqlType)]
-    #[diesel(postgres_type(name = "item_rarity"))]
-    pub struct ItemRarity;
 
     #[derive(diesel::query_builder::QueryId, Clone, diesel::sql_types::SqlType)]
     #[diesel(postgres_type(name = "quest_status"))]
@@ -66,69 +54,29 @@ diesel::table! {
 }
 
 diesel::table! {
-    character_consumable_slots (character_id, slot) {
-        character_id -> Uuid,
-        slot -> Int2,
-        item_instance_id -> Nullable<Uuid>,
+    character_class_path_classes (id) {
+        id -> Uuid,
+        #[max_length = 64]
+        slug -> Varchar,
+        character_class_path_id -> Uuid,
+        created_at -> Timestamptz,
     }
 }
 
 diesel::table! {
-    character_evolution (character_id) {
-        character_id -> Uuid,
-        line_id -> Nullable<Uuid>,
-        current_step -> Int2,
-        last_evolved_at -> Nullable<Timestamptz>,
-    }
-}
-
-diesel::table! {
-    use diesel::sql_types::*;
-    use super::sql_types::QuestStatus;
-
-    character_quests (id) {
+    character_class_paths (id) {
         id -> Uuid,
         character_id -> Uuid,
-        quest_id -> Uuid,
-        status -> QuestStatus,
-        started_at -> Nullable<Timestamptz>,
-        completed_at -> Nullable<Timestamptz>,
+        created_at -> Timestamptz,
     }
 }
 
 diesel::table! {
-    character_skill_slots (character_id, slot) {
-        character_id -> Uuid,
-        slot -> Int2,
-        skill_id -> Uuid,
-    }
-}
-
-diesel::table! {
-    character_skills (character_id, skill_id) {
-        character_id -> Uuid,
-        skill_id -> Uuid,
-        unlocked_at -> Timestamptz,
-    }
-}
-
-diesel::table! {
-    use diesel::sql_types::*;
-    use super::sql_types::CharacterClass;
-    use super::sql_types::CharacterLocation;
-
     characters (id) {
         id -> Uuid,
-        account_id -> Uuid,
-        #[max_length = 24]
-        name -> Varchar,
-        class -> CharacterClass,
-        level -> Int2,
-        experience -> Int8,
-        location -> CharacterLocation,
-        credits -> Int8,
+        #[max_length = 64]
+        slug -> Varchar,
         created_at -> Timestamptz,
-        updated_at -> Timestamptz,
     }
 }
 
@@ -151,15 +99,11 @@ diesel::table! {
 }
 
 diesel::table! {
-    dungeon_history (id) {
+    dungeons (id) {
         id -> Uuid,
-        character_id -> Uuid,
         #[max_length = 64]
-        dungeon_slug -> Varchar,
-        hard_mode -> Bool,
-        completed_at -> Timestamptz,
-        xp_gained -> Int4,
-        duration_secs -> Nullable<Int4>,
+        slug -> Varchar,
+        created_at -> Timestamptz,
     }
 }
 
@@ -172,34 +116,6 @@ diesel::table! {
         slot -> EquipmentSlotType,
         item_instance_id -> Uuid,
         equipped_at -> Timestamptz,
-    }
-}
-
-diesel::table! {
-    use diesel::sql_types::*;
-    use super::sql_types::CharacterClass;
-
-    evolution_lines (id) {
-        id -> Uuid,
-        character_class -> CharacterClass,
-        #[max_length = 64]
-        name -> Varchar,
-        description -> Nullable<Text>,
-        order_index -> Int2,
-        created_at -> Timestamptz,
-    }
-}
-
-diesel::table! {
-    evolution_steps (id) {
-        id -> Uuid,
-        line_id -> Uuid,
-        #[max_length = 64]
-        name -> Varchar,
-        description -> Nullable<Text>,
-        step_index -> Int2,
-        level_req -> Int2,
-        created_at -> Timestamptz,
     }
 }
 
@@ -257,121 +173,155 @@ diesel::table! {
 
 diesel::table! {
     use diesel::sql_types::*;
-    use super::sql_types::ItemRarity;
-    use super::sql_types::EquipmentSlotType;
-    use super::sql_types::CharacterClass;
     use super::sql_types::InventoryType;
 
     items (id) {
         id -> Uuid,
         #[max_length = 64]
-        name -> Varchar,
-        description -> Nullable<Text>,
-        rarity -> ItemRarity,
-        equipment_slot -> Nullable<EquipmentSlotType>,
-        class -> Nullable<CharacterClass>,
-        level_req -> Nullable<Int2>,
-        stats -> Nullable<Jsonb>,
-        created_at -> Timestamptz,
-        #[max_length = 64]
         slug -> Varchar,
         inventory_type -> InventoryType,
-        max_stack -> Int2,
+        created_at -> Timestamptz,
     }
 }
 
 diesel::table! {
-    mob_kills (id) {
+    mobs (id) {
+        id -> Uuid,
+        #[max_length = 64]
+        slug -> Varchar,
+        created_at -> Timestamptz,
+    }
+}
+
+diesel::table! {
+    use diesel::sql_types::*;
+    use super::sql_types::QuestStatus;
+
+    player_account_quests (id) {
+        id -> Uuid,
+        account_id -> Uuid,
+        quest_id -> Uuid,
+        completed_by_character_id -> Nullable<Uuid>,
+        status -> QuestStatus,
+        progress -> Jsonb,
+        #[max_length = 64]
+        selected_reward_item_slug -> Nullable<Varchar>,
+        started_at -> Nullable<Timestamptz>,
+        completed_at -> Nullable<Timestamptz>,
+        claimed_at -> Nullable<Timestamptz>,
+    }
+}
+
+diesel::table! {
+    player_character_dungeon_history (id) {
         id -> Uuid,
         character_id -> Uuid,
-        #[max_length = 64]
-        mob_slug -> Varchar,
-        #[max_length = 64]
-        dungeon_slug -> Nullable<Varchar>,
+        dungeon_id -> Uuid,
+        hard_mode -> Bool,
+        completed_at -> Timestamptz,
+        xp_gained -> Int4,
+        duration_secs -> Nullable<Int4>,
+    }
+}
+
+diesel::table! {
+    player_character_mob_kills (id) {
+        id -> Uuid,
+        character_id -> Uuid,
+        mob_id -> Uuid,
+        dungeon_id -> Nullable<Uuid>,
         killed_at -> Timestamptz,
     }
 }
 
 diesel::table! {
     use diesel::sql_types::*;
-    use super::sql_types::CharacterLocation;
+    use super::sql_types::QuestStatus;
 
-    quests (id) {
+    player_character_quests (id) {
         id -> Uuid,
+        character_id -> Uuid,
+        quest_id -> Uuid,
+        status -> QuestStatus,
+        progress -> Jsonb,
         #[max_length = 64]
-        name -> Varchar,
-        description -> Nullable<Text>,
-        city -> Nullable<CharacterLocation>,
-        level_req -> Int2,
-        created_at -> Timestamptz,
+        selected_reward_item_slug -> Nullable<Varchar>,
+        started_at -> Nullable<Timestamptz>,
+        completed_at -> Nullable<Timestamptz>,
+        claimed_at -> Nullable<Timestamptz>,
     }
 }
 
 diesel::table! {
-    use diesel::sql_types::*;
-    use super::sql_types::CharacterClass;
+    player_characters (id) {
+        id -> Uuid,
+        account_id -> Uuid,
+        #[max_length = 24]
+        name -> Varchar,
+        character_id -> Uuid,
+        #[max_length = 64]
+        current_class_slug -> Varchar,
+        level -> Int2,
+        experience -> Int8,
+        credits -> Int8,
+        created_at -> Timestamptz,
+        updated_at -> Timestamptz,
+    }
+}
 
-    skills (id) {
+diesel::table! {
+    quests (id) {
         id -> Uuid,
         #[max_length = 64]
         slug -> Varchar,
-        #[max_length = 64]
-        name -> Varchar,
-        description -> Nullable<Text>,
-        character_class -> CharacterClass,
-        line_id -> Nullable<Uuid>,
-        level_req -> Int2,
-        max_level -> Int2,
         created_at -> Timestamptz,
     }
 }
 
-diesel::joinable!(character_consumable_slots -> characters (character_id));
-diesel::joinable!(character_consumable_slots -> item_instances (item_instance_id));
-diesel::joinable!(character_evolution -> characters (character_id));
-diesel::joinable!(character_evolution -> evolution_lines (line_id));
-diesel::joinable!(character_quests -> characters (character_id));
-diesel::joinable!(character_quests -> quests (quest_id));
-diesel::joinable!(character_skill_slots -> characters (character_id));
-diesel::joinable!(character_skill_slots -> skills (skill_id));
-diesel::joinable!(character_skills -> characters (character_id));
-diesel::joinable!(character_skills -> skills (skill_id));
-diesel::joinable!(characters -> accounts (account_id));
+diesel::joinable!(character_class_path_classes -> character_class_paths (character_class_path_id));
+diesel::joinable!(character_class_paths -> characters (character_id));
 diesel::joinable!(currency_transactions -> accounts (account_id));
-diesel::joinable!(currency_transactions -> characters (character_id));
-diesel::joinable!(dungeon_history -> characters (character_id));
-diesel::joinable!(equipment -> characters (character_id));
+diesel::joinable!(currency_transactions -> player_characters (character_id));
 diesel::joinable!(equipment -> item_instances (item_instance_id));
-diesel::joinable!(evolution_steps -> evolution_lines (line_id));
-diesel::joinable!(inventory -> characters (character_id));
+diesel::joinable!(equipment -> player_characters (character_id));
+diesel::joinable!(inventory -> player_characters (character_id));
 diesel::joinable!(inventory_items -> inventory (inventory_id));
 diesel::joinable!(inventory_items -> item_instances (item_instance_id));
 diesel::joinable!(inventory_items -> items (item_id));
 diesel::joinable!(item_instances -> accounts (owner_account_id));
-diesel::joinable!(item_instances -> characters (owner_character_id));
 diesel::joinable!(item_instances -> items (item_id));
-diesel::joinable!(mob_kills -> characters (character_id));
-diesel::joinable!(skills -> evolution_lines (line_id));
+diesel::joinable!(item_instances -> player_characters (owner_character_id));
+diesel::joinable!(player_account_quests -> accounts (account_id));
+diesel::joinable!(player_account_quests -> player_characters (completed_by_character_id));
+diesel::joinable!(player_account_quests -> quests (quest_id));
+diesel::joinable!(player_character_dungeon_history -> dungeons (dungeon_id));
+diesel::joinable!(player_character_dungeon_history -> player_characters (character_id));
+diesel::joinable!(player_character_mob_kills -> dungeons (dungeon_id));
+diesel::joinable!(player_character_mob_kills -> mobs (mob_id));
+diesel::joinable!(player_character_mob_kills -> player_characters (character_id));
+diesel::joinable!(player_character_quests -> player_characters (character_id));
+diesel::joinable!(player_character_quests -> quests (quest_id));
+diesel::joinable!(player_characters -> accounts (account_id));
+diesel::joinable!(player_characters -> characters (character_id));
 
 diesel::allow_tables_to_appear_in_same_query!(
     accounts,
-    character_consumable_slots,
-    character_evolution,
-    character_quests,
-    character_skill_slots,
-    character_skills,
+    character_class_path_classes,
+    character_class_paths,
     characters,
     currency_transactions,
-    dungeon_history,
+    dungeons,
     equipment,
-    evolution_lines,
-    evolution_steps,
     inventory,
     inventory_items,
     item_instance_gems,
     item_instances,
     items,
-    mob_kills,
+    mobs,
+    player_account_quests,
+    player_character_dungeon_history,
+    player_character_mob_kills,
+    player_character_quests,
+    player_characters,
     quests,
-    skills,
 );

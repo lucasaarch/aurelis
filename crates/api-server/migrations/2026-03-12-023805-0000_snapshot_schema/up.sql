@@ -1,9 +1,5 @@
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
-CREATE TYPE character_class AS ENUM ('kael', 'rin', 'sirena');
-
-CREATE TYPE character_location AS ENUM ('aurelis', 'volcanis', 'aquavale', 'sylvandar');
-
 CREATE TYPE currency_origin AS ENUM (
     'purchase',
     'trade',
@@ -43,8 +39,6 @@ CREATE TYPE inventory_type AS ENUM (
     'special'
 );
 
-CREATE TYPE item_rarity AS ENUM ('common', 'uncommon', 'rare', 'epic');
-
 CREATE TYPE quest_status AS ENUM ('available', 'in_progress', 'completed');
 
 CREATE TABLE
@@ -79,12 +73,19 @@ CREATE TABLE
 CREATE TABLE
     characters (
         id UUID PRIMARY KEY DEFAULT uuid_generate_v4 (),
+        slug VARCHAR(64) NOT NULL UNIQUE,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW ()
+    );
+
+CREATE TABLE
+    player_characters (
+        id UUID PRIMARY KEY DEFAULT uuid_generate_v4 (),
         account_id UUID NOT NULL REFERENCES accounts (id) ON DELETE CASCADE,
         name VARCHAR(24) NOT NULL UNIQUE,
-        class character_class NOT NULL,
+        character_id UUID NOT NULL REFERENCES characters (id),
+        current_class_slug VARCHAR(64) NOT NULL,
         level SMALLINT NOT NULL DEFAULT 1,
         experience BIGINT NOT NULL DEFAULT 0,
-        location character_location NOT NULL DEFAULT 'aurelis',
         credits BIGINT NOT NULL DEFAULT 0,
         created_at TIMESTAMPTZ NOT NULL DEFAULT NOW (),
         updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW ()
@@ -93,17 +94,23 @@ CREATE TABLE
 CREATE TABLE
     items (
         id UUID PRIMARY KEY DEFAULT uuid_generate_v4 (),
-        name VARCHAR(64) NOT NULL,
-        description TEXT,
-        rarity item_rarity NOT NULL,
-        equipment_slot equipment_slot_type,
-        class character_class,
-        level_req SMALLINT,
-        stats JSONB,
-        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW (),
         slug VARCHAR(64) NOT NULL UNIQUE,
         inventory_type inventory_type NOT NULL,
-        max_stack SMALLINT NOT NULL DEFAULT 1
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW ()
+    );
+
+CREATE TABLE
+    dungeons (
+        id UUID PRIMARY KEY DEFAULT uuid_generate_v4 (),
+        slug VARCHAR(64) NOT NULL UNIQUE,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW ()
+    );
+
+CREATE TABLE
+    mobs (
+        id UUID PRIMARY KEY DEFAULT uuid_generate_v4 (),
+        slug VARCHAR(64) NOT NULL UNIQUE,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW ()
     );
 
 CREATE TABLE
@@ -113,7 +120,7 @@ CREATE TABLE
         refinement SMALLINT NOT NULL DEFAULT 0,
         gem_slots SMALLINT NOT NULL DEFAULT 0,
         attributes JSONB NOT NULL DEFAULT '{}',
-        owner_character_id UUID REFERENCES characters (id) ON DELETE SET NULL,
+        owner_character_id UUID REFERENCES player_characters (id) ON DELETE SET NULL,
         owner_account_id UUID REFERENCES accounts (id) ON DELETE SET NULL,
         in_shared_storage BOOLEAN NOT NULL DEFAULT FALSE,
         in_trade BOOLEAN NOT NULL DEFAULT FALSE,
@@ -134,7 +141,7 @@ CREATE TABLE
 CREATE TABLE
     inventory (
         id UUID PRIMARY KEY DEFAULT uuid_generate_v4 (),
-        character_id UUID NOT NULL REFERENCES characters (id) ON DELETE CASCADE,
+        character_id UUID NOT NULL REFERENCES player_characters (id) ON DELETE CASCADE,
         inventory_type inventory_type NOT NULL,
         capacity SMALLINT NOT NULL DEFAULT 56,
         created_at TIMESTAMPTZ NOT NULL DEFAULT NOW (),
@@ -166,7 +173,7 @@ CREATE TABLE
 
 CREATE TABLE
     equipment (
-        character_id UUID NOT NULL REFERENCES characters (id) ON DELETE CASCADE,
+        character_id UUID NOT NULL REFERENCES player_characters (id) ON DELETE CASCADE,
         slot equipment_slot_type NOT NULL,
         item_instance_id UUID NOT NULL REFERENCES item_instances (id),
         equipped_at TIMESTAMPTZ NOT NULL DEFAULT NOW (),
@@ -176,29 +183,44 @@ CREATE TABLE
 CREATE TABLE
     quests (
         id UUID PRIMARY KEY DEFAULT uuid_generate_v4 (),
-        name VARCHAR(64) NOT NULL,
-        description TEXT,
-        city character_location,
-        level_req SMALLINT NOT NULL DEFAULT 1,
+        slug VARCHAR(64) NOT NULL UNIQUE,
         created_at TIMESTAMPTZ NOT NULL DEFAULT NOW ()
     );
 
 CREATE TABLE
-    character_quests (
+    player_character_quests (
         id UUID PRIMARY KEY DEFAULT uuid_generate_v4 (),
-        character_id UUID NOT NULL REFERENCES characters (id) ON DELETE CASCADE,
+        character_id UUID NOT NULL REFERENCES player_characters (id) ON DELETE CASCADE,
         quest_id UUID NOT NULL REFERENCES quests (id),
         status quest_status NOT NULL DEFAULT 'available',
+        progress JSONB NOT NULL DEFAULT '{}',
+        selected_reward_item_slug VARCHAR(64),
         started_at TIMESTAMPTZ,
         completed_at TIMESTAMPTZ,
+        claimed_at TIMESTAMPTZ,
         UNIQUE (character_id, quest_id)
     );
 
 CREATE TABLE
-    dungeon_history (
+    player_account_quests (
         id UUID PRIMARY KEY DEFAULT uuid_generate_v4 (),
-        character_id UUID NOT NULL REFERENCES characters (id) ON DELETE CASCADE,
-        dungeon_slug VARCHAR(64) NOT NULL,
+        account_id UUID NOT NULL REFERENCES accounts (id) ON DELETE CASCADE,
+        quest_id UUID NOT NULL REFERENCES quests (id),
+        completed_by_character_id UUID REFERENCES player_characters (id) ON DELETE SET NULL,
+        status quest_status NOT NULL DEFAULT 'available',
+        progress JSONB NOT NULL DEFAULT '{}',
+        selected_reward_item_slug VARCHAR(64),
+        started_at TIMESTAMPTZ,
+        completed_at TIMESTAMPTZ,
+        claimed_at TIMESTAMPTZ,
+        UNIQUE (account_id, quest_id)
+    );
+
+CREATE TABLE
+    player_character_dungeon_history (
+        id UUID PRIMARY KEY DEFAULT uuid_generate_v4 (),
+        character_id UUID NOT NULL REFERENCES player_characters (id) ON DELETE CASCADE,
+        dungeon_id UUID NOT NULL REFERENCES dungeons (id),
         hard_mode BOOLEAN NOT NULL DEFAULT FALSE,
         completed_at TIMESTAMPTZ NOT NULL DEFAULT NOW (),
         xp_gained INT NOT NULL DEFAULT 0,
@@ -206,87 +228,35 @@ CREATE TABLE
     );
 
 CREATE TABLE
-    mob_kills (
+    player_character_mob_kills (
         id UUID PRIMARY KEY DEFAULT uuid_generate_v4 (),
-        character_id UUID NOT NULL REFERENCES characters (id) ON DELETE CASCADE,
-        mob_slug VARCHAR(64) NOT NULL,
-        dungeon_slug VARCHAR(64),
+        character_id UUID NOT NULL REFERENCES player_characters (id) ON DELETE CASCADE,
+        mob_id UUID NOT NULL REFERENCES mobs (id),
+        dungeon_id UUID REFERENCES dungeons (id),
         killed_at TIMESTAMPTZ NOT NULL DEFAULT NOW ()
     );
 
 CREATE TABLE
-    evolution_lines (
+    character_class_paths (
         id UUID PRIMARY KEY DEFAULT uuid_generate_v4 (),
-        character_class character_class NOT NULL,
-        name VARCHAR(64) NOT NULL,
-        description TEXT,
-        order_index SMALLINT NOT NULL,
+        character_id UUID NOT NULL REFERENCES characters (id) ON DELETE CASCADE,
         created_at TIMESTAMPTZ NOT NULL DEFAULT NOW ()
     );
 
 CREATE TABLE
-    evolution_steps (
-        id UUID PRIMARY KEY DEFAULT uuid_generate_v4 (),
-        line_id UUID NOT NULL REFERENCES evolution_lines (id) ON DELETE CASCADE,
-        name VARCHAR(64) NOT NULL,
-        description TEXT,
-        step_index SMALLINT NOT NULL,
-        level_req SMALLINT NOT NULL,
-        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW (),
-        UNIQUE (line_id, step_index)
-    );
-
-CREATE TABLE
-    character_evolution (
-        character_id UUID NOT NULL REFERENCES characters (id) ON DELETE CASCADE,
-        line_id UUID REFERENCES evolution_lines (id),
-        current_step SMALLINT NOT NULL DEFAULT 0,
-        last_evolved_at TIMESTAMPTZ,
-        PRIMARY KEY (character_id)
-    );
-
-CREATE TABLE
-    skills (
+    character_class_path_classes (
         id UUID PRIMARY KEY DEFAULT uuid_generate_v4 (),
         slug VARCHAR(64) NOT NULL UNIQUE,
-        name VARCHAR(64) NOT NULL,
-        description TEXT,
-        character_class character_class NOT NULL,
-        line_id UUID REFERENCES evolution_lines (id),
-        level_req SMALLINT NOT NULL DEFAULT 1,
-        max_level SMALLINT NOT NULL DEFAULT 1,
-        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW ()
-    );
-
-CREATE TABLE
-    character_skills (
-        character_id UUID NOT NULL REFERENCES characters (id) ON DELETE CASCADE,
-        skill_id UUID NOT NULL REFERENCES skills (id),
-        unlocked_at TIMESTAMPTZ NOT NULL DEFAULT NOW (),
-        PRIMARY KEY (character_id, skill_id)
-    );
-
-CREATE TABLE
-    character_skill_slots (
-        character_id UUID NOT NULL REFERENCES characters (id) ON DELETE CASCADE,
-        slot SMALLINT NOT NULL CHECK (slot BETWEEN 1 AND 8),
-        skill_id UUID NOT NULL REFERENCES skills (id),
-        PRIMARY KEY (character_id, slot)
-    );
-
-CREATE TABLE
-    character_consumable_slots (
-        character_id UUID NOT NULL REFERENCES characters (id) ON DELETE CASCADE,
-        slot SMALLINT NOT NULL CHECK (slot BETWEEN 1 AND 6),
-        item_instance_id UUID REFERENCES item_instances (id),
-        PRIMARY KEY (character_id, slot)
+        character_class_path_id UUID NOT NULL REFERENCES character_class_paths (id) ON DELETE CASCADE,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW (),
+        UNIQUE (character_class_path_id, slug)
     );
 
 CREATE TABLE
     currency_transactions (
         id UUID PRIMARY KEY DEFAULT uuid_generate_v4 (),
         account_id UUID REFERENCES accounts (id) ON DELETE SET NULL,
-        character_id UUID REFERENCES characters (id) ON DELETE SET NULL,
+        character_id UUID REFERENCES player_characters (id) ON DELETE SET NULL,
         currency VARCHAR(16) NOT NULL,
         amount BIGINT NOT NULL,
         balance_after BIGINT NOT NULL,
@@ -296,7 +266,7 @@ CREATE TABLE
     );
 
 
-CREATE INDEX idx_characters_account_id ON characters (account_id);
+CREATE INDEX idx_player_characters_account_id ON player_characters (account_id);
 
 CREATE INDEX idx_inventory_character_id ON inventory (character_id);
 
@@ -306,27 +276,23 @@ CREATE INDEX idx_inventory_items_instance ON inventory_items (item_instance_id);
 
 CREATE INDEX idx_inventory_items_item ON inventory_items (item_id);
 
-CREATE INDEX idx_character_quests_char ON character_quests (character_id);
+CREATE INDEX idx_player_character_quests_char ON player_character_quests (character_id);
 
-CREATE INDEX idx_dungeon_history_char ON dungeon_history (character_id);
+CREATE INDEX idx_player_account_quests_account ON player_account_quests (account_id);
 
-CREATE INDEX idx_mob_kills_character ON mob_kills (character_id);
+CREATE INDEX idx_player_character_dungeon_history_char ON player_character_dungeon_history (character_id);
 
-CREATE INDEX idx_mob_kills_mob_slug ON mob_kills (mob_slug);
+CREATE INDEX idx_player_character_mob_kills_character ON player_character_mob_kills (character_id);
 
-CREATE INDEX idx_mob_kills_dungeon_slug ON mob_kills (dungeon_slug);
+CREATE INDEX idx_player_character_mob_kills_mob_id ON player_character_mob_kills (mob_id);
 
-CREATE INDEX idx_mob_kills_character_mob ON mob_kills (character_id, mob_slug);
+CREATE INDEX idx_player_character_mob_kills_dungeon_id ON player_character_mob_kills (dungeon_id);
 
-CREATE INDEX idx_evolution_lines_class ON evolution_lines (character_class);
+CREATE INDEX idx_player_character_mob_kills_character_mob ON player_character_mob_kills (character_id, mob_id);
 
-CREATE INDEX idx_evolution_steps_line ON evolution_steps (line_id);
+CREATE INDEX idx_character_class_paths_character_id ON character_class_paths (character_id);
 
-CREATE INDEX idx_character_skills_char ON character_skills (character_id);
-
-CREATE INDEX idx_skills_class ON skills (character_class);
-
-CREATE INDEX idx_character_skill_slots_char ON character_skill_slots (character_id);
+CREATE INDEX idx_character_class_path_classes_path_id ON character_class_path_classes (character_class_path_id);
 
 CREATE INDEX idx_currency_transactions_acc ON currency_transactions (account_id);
 
@@ -339,3 +305,7 @@ CREATE INDEX idx_item_instances_account ON item_instances (owner_account_id);
 CREATE INDEX idx_items_slug ON items (slug);
 
 CREATE INDEX idx_items_inventory_type ON items (inventory_type);
+
+CREATE INDEX idx_dungeons_slug ON dungeons (slug);
+
+CREATE INDEX idx_mobs_slug ON mobs (slug);

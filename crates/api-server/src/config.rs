@@ -13,11 +13,10 @@ pub struct DatabaseConfig {
 
 #[derive(Debug, Clone)]
 pub struct ServerConfig {
-    pub http_port: u16,
-    pub grpc_port: u16,
     /// Allowed origins for CORS. Parsed from the API_ALLOWED_ORIGINS env var
     /// as a comma-separated list. Example: "http://localhost:3000,https://app.example.com"
     pub allowed_origins: Vec<String>,
+    pub internal_server_token: String,
 }
 
 #[derive(Debug, Clone)]
@@ -46,8 +45,6 @@ impl Config {
                 url: require_env_var("API_DATABASE_URL")?,
             },
             server: ServerConfig {
-                http_port: env_var("API_SERVER_HTTP_PORT", Some(8080))?,
-                grpc_port: env_var("API_SERVER_GRPC_PORT", Some(50051))?,
                 allowed_origins: {
                     // Parse comma-separated API_ALLOWED_ORIGINS env var into Vec<String>.
                     // If not present, default to a sensible local development origin.
@@ -68,6 +65,7 @@ impl Config {
                         }
                     }
                 },
+                internal_server_token: require_env_var("API_INTERNAL_SERVER_TOKEN")?,
             },
             jwt: JwtConfig {
                 secret_web: require_env_var("API_JWT_SECRET_WEB")?,

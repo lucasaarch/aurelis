@@ -2,35 +2,10 @@ use bigdecimal::BigDecimal;
 use uuid::Uuid;
 use validator::ValidationError;
 
-pub fn validate_rarity(value: &str) -> Result<(), ValidationError> {
-    match value {
-        "common" | "uncommon" | "rare" | "epic" => Ok(()),
-        _ => Err(ValidationError::new("invalid_rarity")),
-    }
-}
-
-pub fn validate_equipment_slot(value: &str) -> Result<(), ValidationError> {
-    match value {
-        "weapon" | "head" | "chest" | "legs" | "gloves" | "shoes" | "acc_ring_1" | "acc_ring_2"
-        | "acc_necklace" | "acc_earrings" | "acc_arm" | "acc_face_bottom" | "acc_face_middle"
-        | "acc_face_top" | "acc_bottom_piece" | "acc_top_piece" | "acc_weapon"
-        | "acc_support_unit" => Ok(()),
-        _ => Err(ValidationError::new("invalid_equipment_slot")),
-    }
-}
-
 pub fn validate_class(value: &str) -> Result<(), ValidationError> {
     match value {
         "kael" | "rin" | "sirena" => Ok(()),
         _ => Err(ValidationError::new("invalid_class")),
-    }
-}
-
-pub fn validate_stats(value: &serde_json::Value) -> Result<(), ValidationError> {
-    if value.is_object() {
-        Ok(())
-    } else {
-        Err(ValidationError::new("stats_must_be_object"))
     }
 }
 

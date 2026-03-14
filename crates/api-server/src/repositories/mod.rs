@@ -5,8 +5,11 @@ use crate::db::Database;
 
 pub mod account;
 pub mod character;
+pub mod dungeon;
 pub mod inventory;
 pub mod item;
+pub mod mob;
+pub mod quest;
 
 #[derive(Debug, Error)]
 pub enum RepositoryError {

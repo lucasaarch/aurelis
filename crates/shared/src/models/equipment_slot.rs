@@ -1,0 +1,21 @@
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum EquipmentSlot {
+    Weapon,
+    Head,
+    Chest,
+    Legs,
+    Gloves,
+    Shoes,
+    AccRing1,
+    AccRing2,
+    AccNecklace,
+    AccEarrings,
+    AccArm,
+    AccFaceBottom,
+    AccFaceMiddle,
+    AccFaceTop,
+    AccBottomPiece,
+    AccTopPiece,
+    AccWeapon,
+    AccSupportUnit,
+}

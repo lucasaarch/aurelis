@@ -15,6 +15,8 @@ use crate::{
         parsers::parse_uuid,
     },
 };
+use shared::data::cities::find_item_by_slug;
+use shared::models::item_rarity::ItemRarity;
 
 pub struct GrpcInventoryServiceImpl {
     auth_service: AuthService,
@@ -136,14 +138,21 @@ impl shared::proto::inventory::inventory_service_server::InventoryService
         let proto_items: Vec<ProtoInventoryItem> = items
             .into_iter()
             .map(|detailed| {
+                let item_data = find_item_by_slug(&detailed.slug);
                 // `detailed` is InventoryDetailedItem containing both inventory and item fields
                 let proto_detail = shared::proto::inventory::ItemDetail {
                     id: detailed.item_id.map(|u| u.to_string()).unwrap_or_default(),
-                    name: detailed.name.clone(),
-                    description: detailed.description.clone().unwrap_or_default(),
+                    name: item_data
+                        .map(|item| item.name.to_string())
+                        .unwrap_or_else(|| detailed.slug.clone()),
+                    description: item_data
+                        .map(|item| item.description.to_string())
+                        .unwrap_or_default(),
                     icon: String::new(),
-                    rarity: detailed.rarity.to_string(),
-                    max_stack: detailed.max_stack as i32,
+                    rarity: item_data
+                        .map(|item| map_rarity(item.rarity).to_string())
+                        .unwrap_or_default(),
+                    max_stack: item_data.map(|item| item.max_stack).unwrap_or(1),
                     base_stats: std::collections::HashMap::new(),
                     attributes: vec![],
                 };
@@ -163,5 +172,14 @@ impl shared::proto::inventory::inventory_service_server::InventoryService
             .collect();
 
         Ok(Response::new(ListItemsResponse { items: proto_items }))
+    }
+}
+
+fn map_rarity(rarity: ItemRarity) -> &'static str {
+    match rarity {
+        ItemRarity::Common => "common",
+        ItemRarity::Uncommon => "uncommon",
+        ItemRarity::Rare => "rare",
+        ItemRarity::Epic => "epic",
     }
 }

@@ -4,6 +4,7 @@ use crate::repositories::item::{ListItemFilters, PgItemRepository};
 use crate::services::account::AccountService;
 use crate::services::character::CharacterService;
 use crate::services::inventory::InventoryService;
+use shared::data::cities::find_item_by_slug;
 use uuid::Uuid;
 
 #[derive(Clone)]
@@ -78,6 +79,12 @@ impl ItemService {
         self.ensure_admin(actor_id).await?;
 
         let item = self.item_repository.find_by_slug(item_slug).await?;
+        let item_data = find_item_by_slug(&item.slug).ok_or_else(|| {
+            AppError::Internal(anyhow::anyhow!(
+                "Item '{}' exists in database but is missing from shared item catalog",
+                item.slug
+            ))
+        })?;
 
         let character = self
             .character_service
@@ -85,29 +92,39 @@ impl ItemService {
             .await?;
 
         let inv_type = item.inventory_type.to_string();
-        let max_stack = item.max_stack.max(1);
+        let max_stack = i16::try_from(item_data.max_stack).map_err(|_| {
+            AppError::Internal(anyhow::anyhow!(
+                "Item '{}' has invalid max_stack value {}",
+                item.slug,
+                item_data.max_stack
+            ))
+        })?;
+
+        if max_stack < 1 {
+            return Err(AppError::Internal(anyhow::anyhow!(
+                "Item '{}' has invalid max_stack value {}",
+                item.slug,
+                item_data.max_stack
+            )));
+        }
+
         let mut remaining = quantity.unwrap_or(1);
 
         while remaining > 0 {
-            if max_stack > 1 {
-                if let Some(slot) = self
-                    .inventory_service
-                    .find_slot_by_item_with_space(
-                        character.id,
-                        inv_type.clone(),
-                        item.id,
-                        max_stack,
-                    )
-                    .await?
-                {
-                    let space = max_stack - slot.quantity;
-                    let add = remaining.min(space);
-                    self.inventory_service
-                        .increment_quantity(slot.id, add)
-                        .await?;
-                    remaining -= add;
-                    continue;
-                }
+            if let Some(stackable_slot) = self
+                .inventory_service
+                .find_slot_by_item_with_space(character.id, inv_type.clone(), item.id, max_stack)
+                .await?
+            {
+                let available_space = max_stack - stackable_slot.quantity;
+                let amount_to_add = remaining.min(available_space);
+
+                self.inventory_service
+                    .increment_quantity(stackable_slot.id, amount_to_add)
+                    .await?;
+
+                remaining -= amount_to_add;
+                continue;
             }
 
             let slot = self
@@ -120,11 +137,18 @@ impl ItemService {
                 None => return Err(AppError::BadRequest("Inventory is full".to_string())),
             };
 
-            let add = remaining.min(max_stack);
+            let amount_to_insert = remaining.min(max_stack);
+
             self.inventory_service
-                .insert_item_slot(character.id, inv_type.clone(), item.id, slot, add)
+                .insert_item_slot(
+                    character.id,
+                    inv_type.clone(),
+                    item.id,
+                    slot,
+                    amount_to_insert,
+                )
                 .await?;
-            remaining -= add;
+            remaining -= amount_to_insert;
         }
 
         Ok(())

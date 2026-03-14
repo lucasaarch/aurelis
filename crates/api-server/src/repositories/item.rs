@@ -3,23 +3,17 @@ use crate::{
     models::item::ItemModel,
     repositories::{Repository, RepositoryError},
 };
+use diesel::dsl::insert_into;
 use diesel::pg::Pg;
 use diesel::prelude::*;
+use diesel::upsert::excluded;
 use uuid::Uuid;
 
-use crate::models::{
-    character_class::CharacterClassModel, equipment_slot::EquipmentSlotModel,
-    inventory_type::InventoryTypeModel, item_rarity::ItemRarityModel,
-};
+use crate::models::inventory_type::InventoryTypeModel;
 
 #[derive(Clone, Default)]
 pub struct ListItemFilters {
-    pub class: Option<CharacterClassModel>,
-    pub rarity: Option<ItemRarityModel>,
-    pub equipment_slot: Option<EquipmentSlotModel>,
     pub inventory_type: Option<InventoryTypeModel>,
-    pub level_min: Option<i16>,
-    pub level_max: Option<i16>,
     pub search: Option<String>,
 }
 
@@ -61,7 +55,26 @@ impl PgItemRepository {
         .await
     }
 
-    // NOTE: item creation/deletion removed.
+    pub async fn upsert_catalog_item(
+        &self,
+        item_slug: String,
+        item_inventory_type: InventoryTypeModel,
+    ) -> Result<ItemModel, RepositoryError> {
+        self.run_blocking(move |conn| {
+            use crate::db::schema::items::dsl::*;
+
+            let item = ItemModel::new(item_slug, item_inventory_type);
+
+            insert_into(items)
+                .values(&item)
+                .on_conflict(slug)
+                .do_update()
+                .set(inventory_type.eq(excluded(inventory_type)))
+                .get_result::<ItemModel>(conn)
+                .map_err(Into::into)
+        })
+        .await
+    }
 
     pub async fn list(
         &self,
@@ -74,53 +87,23 @@ impl PgItemRepository {
             use crate::db::schema::items::dsl::*;
 
             let mut count_query = items.into_boxed::<Pg>();
-            if let Some(ref value) = filters.class {
-                count_query = count_query.filter(class.eq(Some(value.clone())));
-            }
-            if let Some(ref value) = filters.rarity {
-                count_query = count_query.filter(rarity.eq(value.clone()));
-            }
-            if let Some(ref value) = filters.equipment_slot {
-                count_query = count_query.filter(equipment_slot.eq(Some(value.clone())));
-            }
             if let Some(ref value) = filters.inventory_type {
                 count_query = count_query.filter(inventory_type.eq(value.clone()));
             }
-            if let Some(value) = filters.level_min {
-                count_query = count_query.filter(level_req.ge(value));
-            }
-            if let Some(value) = filters.level_max {
-                count_query = count_query.filter(level_req.le(value));
-            }
             if let Some(ref value) = filters.search {
                 let pattern = format!("%{}%", value);
-                count_query = count_query.filter(name.ilike(pattern));
+                count_query = count_query.filter(slug.ilike(pattern));
             }
 
             let total = count_query.count().get_result::<i64>(conn)?;
 
             let mut rows_query = items.into_boxed::<Pg>();
-            if let Some(ref value) = filters.class {
-                rows_query = rows_query.filter(class.eq(Some(value.clone())));
-            }
-            if let Some(ref value) = filters.rarity {
-                rows_query = rows_query.filter(rarity.eq(value.clone()));
-            }
-            if let Some(ref value) = filters.equipment_slot {
-                rows_query = rows_query.filter(equipment_slot.eq(Some(value.clone())));
-            }
             if let Some(ref value) = filters.inventory_type {
                 rows_query = rows_query.filter(inventory_type.eq(value.clone()));
             }
-            if let Some(value) = filters.level_min {
-                rows_query = rows_query.filter(level_req.ge(value));
-            }
-            if let Some(value) = filters.level_max {
-                rows_query = rows_query.filter(level_req.le(value));
-            }
             if let Some(ref value) = filters.search {
                 let pattern = format!("%{}%", value);
-                rows_query = rows_query.filter(name.ilike(pattern));
+                rows_query = rows_query.filter(slug.ilike(pattern));
             }
 
             let rows = rows_query
@@ -146,6 +129,15 @@ impl PgItemRepository {
                 .filter(id.eq_any(ids))
                 .load::<ItemModel>(conn)
                 .map_err(Into::into)
+        })
+        .await
+    }
+
+    pub async fn list_catalog_slugs(&self) -> Result<Vec<String>, RepositoryError> {
+        self.run_blocking(move |conn| {
+            use crate::db::schema::items::dsl::*;
+
+            items.select(slug).load::<String>(conn).map_err(Into::into)
         })
         .await
     }
