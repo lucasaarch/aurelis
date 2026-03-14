@@ -1,3 +1,4 @@
+pub mod combat_stats;
 pub mod character_data;
 pub mod dungeon_data;
 pub mod equipment_slot;

@@ -4,7 +4,7 @@ use uuid::Uuid;
 
 use crate::models::inventory_type::InventoryTypeModel;
 
-#[derive(Queryable, Insertable)]
+#[derive(Clone, Queryable, Insertable)]
 #[diesel(table_name = crate::db::schema::items)]
 pub struct ItemModel {
     pub id: Uuid,

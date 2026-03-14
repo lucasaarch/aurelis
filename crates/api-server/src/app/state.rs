@@ -46,8 +46,11 @@ impl AppState {
             hash_service.clone(),
             jwt_service.clone(),
         );
-        let character_service =
-            CharacterService::new(character_repository, account_repository.clone());
+        let character_service = CharacterService::new(
+            character_repository,
+            account_repository.clone(),
+            item_repository.clone(),
+        );
         let inventory_service = InventoryService::new(inventory_repository.clone());
         let item_service = ItemService::new(
             item_repository,

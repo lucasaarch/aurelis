@@ -4,7 +4,7 @@ use uuid::Uuid;
 
 use crate::models::equipment_slot::EquipmentSlotModel;
 
-#[derive(Queryable, Insertable)]
+#[derive(Clone, Queryable, Insertable)]
 #[diesel(table_name = crate::db::schema::equipment)]
 pub struct EquipmentModel {
     pub character_id: Uuid,

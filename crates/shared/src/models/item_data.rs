@@ -1,5 +1,6 @@
 use crate::models::{
-    equipment_slot::EquipmentSlot, inventory_type::InventoryType, item_rarity::ItemRarity,
+    combat_stats::FixedStatLine, equipment_slot::EquipmentSlot, inventory_type::InventoryType,
+    item_rarity::ItemRarity,
 };
 
 pub struct ItemData {
@@ -49,13 +50,15 @@ pub struct WeaponData {
     pub slot: EquipmentSlot,
     pub class: Option<&'static str>,
     pub level_req: i16,
-    pub stats: WeaponStats,
+    pub fixed_stats: &'static [FixedStatLine],
+    pub gem_slots: GemSlotConfig,
 }
 
 pub struct ArmorData {
     pub slot: EquipmentSlot,
     pub level_req: i16,
-    pub stats: ArmorStats,
+    pub fixed_stats: &'static [FixedStatLine],
+    pub gem_slots: GemSlotConfig,
 }
 
 pub struct ConsumableData {
@@ -67,14 +70,47 @@ pub struct ConsumableData {
     pub attack_speed_boost_percent: Option<f32>,
 }
 
-pub struct WeaponStats {
-    pub physical_atk: i32,
-    pub magical_atk: i32,
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct GemSlotConfig {
+    pub base_slots: i16,
+    pub max_bonus_slots: i16,
 }
 
-pub struct ArmorStats {
-    pub physical_def: i32,
-    pub magical_def: i32,
+impl GemSlotConfig {
+    pub const FOUR_BASE_PLUS_ONE_BONUS: Self = Self {
+        base_slots: 4,
+        max_bonus_slots: 1,
+    };
+
+    pub const fn total_possible_slots(self) -> i16 {
+        self.base_slots + self.max_bonus_slots
+    }
+}
+
+impl ItemKind {
+    pub fn equipment_slot(&self) -> Option<EquipmentSlot> {
+        match self {
+            ItemKind::Weapon(data) => Some(data.slot),
+            ItemKind::Armor(data) => Some(data.slot),
+            _ => None,
+        }
+    }
+
+    pub fn fixed_stats(&self) -> Option<&'static [FixedStatLine]> {
+        match self {
+            ItemKind::Weapon(data) => Some(data.fixed_stats),
+            ItemKind::Armor(data) => Some(data.fixed_stats),
+            _ => None,
+        }
+    }
+
+    pub fn gem_slots(&self) -> Option<GemSlotConfig> {
+        match self {
+            ItemKind::Weapon(data) => Some(data.gem_slots),
+            ItemKind::Armor(data) => Some(data.gem_slots),
+            _ => None,
+        }
+    }
 }
 
 pub struct SpecialData {

@@ -7,14 +7,15 @@ use crate::{
     db::{
         Database,
         schema::{
-            character_class_path_classes, character_class_paths, characters, inventory,
-            player_characters,
+            character_class_path_classes, character_class_paths, characters, equipment, inventory,
+            inventory_items, item_instance_gems, item_instances, player_characters,
         },
     },
     models::{
         character::CharacterModel, character_class_path::CharacterClassPathModel,
-        character_class_path_class::CharacterClassPathClassModel, inventory::InventoryModel,
-        player_character::PlayerCharacterModel,
+        character_class_path_class::CharacterClassPathClassModel, equipment::EquipmentModel,
+        inventory::InventoryModel, inventory_item::InventoryItemModel, item_instance::ItemInstanceModel,
+        item_instance_gem::ItemInstanceGemModel, player_character::PlayerCharacterModel,
     },
     repositories::{Repository, RepositoryError},
 };
@@ -39,6 +40,8 @@ pub struct PlayableCharacterRow {
     pub base_character_slug: String,
     pub current_class_slug: String,
     pub level: i16,
+    pub experience: i64,
+    pub credits: i64,
 }
 
 pub struct CreateCharacterParams {
@@ -333,8 +336,10 @@ impl PgCharacterRepository {
                     characters::slug,
                     player_characters::current_class_slug,
                     player_characters::level,
+                    player_characters::experience,
+                    player_characters::credits,
                 ))
-                .first::<(Uuid, Uuid, String, String, String, i16)>(conn)?;
+                .first::<(Uuid, Uuid, String, String, String, i16, i64, i64)>(conn)?;
 
             Ok(PlayableCharacterRow {
                 character_id: row.0,
@@ -343,7 +348,92 @@ impl PgCharacterRepository {
                 base_character_slug: row.3,
                 current_class_slug: row.4,
                 level: row.5,
+                experience: row.6,
+                credits: row.7,
             })
+        })
+        .await
+    }
+
+    pub async fn list_inventories(
+        &self,
+        player_character_id: Uuid,
+    ) -> Result<Vec<InventoryModel>, RepositoryError> {
+        self.run_blocking(move |conn| {
+            inventory::table
+                .filter(inventory::character_id.eq(player_character_id))
+                .order(inventory::created_at.asc())
+                .load::<InventoryModel>(conn)
+                .map_err(Into::into)
+        })
+        .await
+    }
+
+    pub async fn list_inventory_items(
+        &self,
+        inventory_ids: Vec<Uuid>,
+    ) -> Result<Vec<InventoryItemModel>, RepositoryError> {
+        if inventory_ids.is_empty() {
+            return Ok(vec![]);
+        }
+
+        self.run_blocking(move |conn| {
+            inventory_items::table
+                .filter(inventory_items::inventory_id.eq_any(inventory_ids))
+                .order((inventory_items::inventory_id.asc(), inventory_items::slot_index.asc()))
+                .load::<InventoryItemModel>(conn)
+                .map_err(Into::into)
+        })
+        .await
+    }
+
+    pub async fn list_equipment(
+        &self,
+        player_character_id: Uuid,
+    ) -> Result<Vec<EquipmentModel>, RepositoryError> {
+        self.run_blocking(move |conn| {
+            equipment::table
+                .filter(equipment::character_id.eq(player_character_id))
+                .load::<EquipmentModel>(conn)
+                .map_err(Into::into)
+        })
+        .await
+    }
+
+    pub async fn list_item_instances(
+        &self,
+        item_instance_ids: Vec<Uuid>,
+    ) -> Result<Vec<ItemInstanceModel>, RepositoryError> {
+        if item_instance_ids.is_empty() {
+            return Ok(vec![]);
+        }
+
+        self.run_blocking(move |conn| {
+            item_instances::table
+                .filter(item_instances::id.eq_any(item_instance_ids))
+                .load::<ItemInstanceModel>(conn)
+                .map_err(Into::into)
+        })
+        .await
+    }
+
+    pub async fn list_item_instance_gems(
+        &self,
+        item_instance_ids: Vec<Uuid>,
+    ) -> Result<Vec<ItemInstanceGemModel>, RepositoryError> {
+        if item_instance_ids.is_empty() {
+            return Ok(vec![]);
+        }
+
+        self.run_blocking(move |conn| {
+            item_instance_gems::table
+                .filter(item_instance_gems::item_instance_id.eq_any(item_instance_ids))
+                .order((
+                    item_instance_gems::item_instance_id.asc(),
+                    item_instance_gems::slot_index.asc(),
+                ))
+                .load::<ItemInstanceGemModel>(conn)
+                .map_err(Into::into)
         })
         .await
     }

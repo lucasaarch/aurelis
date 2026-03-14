@@ -8,6 +8,7 @@ use crate::network::plugin::GameServerNetworkPlugin;
 use crate::resources::client_sessions::ClientSessions;
 use crate::resources::connected_players::ConnectedPlayers;
 use crate::resources::internal_api::InternalApi;
+use crate::resources::runtime_characters::RuntimeCharacters;
 use crate::resources::server_boot_state::ServerBootState;
 use crate::server_config::ServerRuntimeConfig;
 
@@ -29,6 +30,7 @@ pub fn run() {
         .insert_resource(ServerBootState::default())
         .insert_resource(ClientSessions::default())
         .insert_resource(ConnectedPlayers::default())
+        .insert_resource(RuntimeCharacters::default())
         .add_plugins(
             MinimalPlugins.set(ScheduleRunnerPlugin::run_loop(Duration::from_secs_f64(
                 1.0 / tick_rate,

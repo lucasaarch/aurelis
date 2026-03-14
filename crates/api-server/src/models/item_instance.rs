@@ -3,7 +3,7 @@ use diesel::prelude::{Insertable, Queryable};
 use serde_json::Value;
 use uuid::Uuid;
 
-#[derive(Queryable, Insertable)]
+#[derive(Clone, Queryable, Insertable)]
 #[diesel(table_name = crate::db::schema::item_instances)]
 pub struct ItemInstanceModel {
     pub id: Uuid,

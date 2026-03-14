@@ -1,3 +1,5 @@
+use crate::models::combat_stats::CombatStats;
+
 pub struct CharacterData {
     pub slug: &'static str,
     pub name: &'static str,
@@ -6,6 +8,7 @@ pub struct CharacterData {
     pub evolution_lines: &'static [&'static ClassPathData],
 }
 
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub struct CharacterBaseStats {
     pub hp: i32,
     pub mp: i32,
@@ -89,5 +92,44 @@ impl CharacterData {
             }
         }
         Some(slugs)
+    }
+
+    pub fn find_class_by_slug(&self, class_slug: &str) -> Option<&'static ClassData> {
+        self.evolution_lines
+            .iter()
+            .flat_map(|path| path.steps.iter().copied())
+            .find(|class| class.slug == class_slug)
+    }
+}
+
+impl From<CharacterBaseStats> for CombatStats {
+    fn from(value: CharacterBaseStats) -> Self {
+        Self {
+            core: crate::models::combat_stats::CombatCoreStats {
+                hp: value.hp,
+                mp: value.mp,
+                physical_atk: value.physical_atk,
+                magical_atk: value.magical_atk,
+                physical_def: value.physical_def,
+                magical_def: value.magical_def,
+                move_spd: value.move_spd,
+                atk_spd: value.atk_spd,
+            },
+            secondary: crate::models::combat_stats::CombatSecondaryStats {
+                damage_reduction: 0,
+                crit_chance: 0,
+                crit_damage: 0,
+                accuracy: 0,
+                physical_pen: 0,
+                magical_pen: 0,
+                hp_regen: 0,
+                mp_regen: 0,
+                life_steal: 0,
+                cooldown_reduction: 0,
+                crit_resistance: 0,
+                knockback_resistance: 0,
+                cc_resistance: 0,
+            },
+        }
     }
 }

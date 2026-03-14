@@ -13,7 +13,9 @@ use crate::network::auth::GameTokenVerifier;
 use crate::resources::client_sessions::{ClientSession, ClientSessions, SessionState};
 use crate::resources::connected_players::ConnectedPlayers;
 use crate::resources::internal_api::InternalApi;
+use crate::resources::runtime_characters::RuntimeCharacters;
 use crate::resources::server_boot_state::ServerBootState;
+use crate::runtime::builder::build_runtime_character;
 use crate::server_config::ServerRuntimeConfig;
 use shared::net::{ClientMessage, ServerMessage};
 
@@ -112,15 +114,18 @@ pub fn initialize_session_on_player_connected(
 pub fn cleanup_session_on_player_disconnected(
     mut reader: MessageReader<PlayerDisconnected>,
     mut sessions: ResMut<ClientSessions>,
+    mut runtime_characters: ResMut<RuntimeCharacters>,
 ) {
     for event in reader.read() {
         sessions.by_client_id.remove(&event.client_id);
+        runtime_characters.by_client_id.remove(&event.client_id);
     }
 }
 
 pub fn process_client_messages(
     mut server: ResMut<RenetServer>,
     mut sessions: ResMut<ClientSessions>,
+    mut runtime_characters: ResMut<RuntimeCharacters>,
     internal_api: Res<InternalApi>,
     token_verifier: Res<GameTokenVerifier>,
 ) {
@@ -148,6 +153,7 @@ pub fn process_client_messages(
                     handle_select_character(
                         &mut server,
                         &mut sessions,
+                        &mut runtime_characters,
                         &internal_api,
                         client_id,
                         character_id,
@@ -198,6 +204,7 @@ fn handle_authenticate(
 fn handle_select_character(
     server: &mut RenetServer,
     sessions: &mut ClientSessions,
+    runtime_characters: &mut RuntimeCharacters,
     internal_api: &InternalApi,
     client_id: u64,
     character_id: uuid::Uuid,
@@ -247,10 +254,25 @@ fn handle_select_character(
         }
     };
 
+    let runtime_character = match build_runtime_character(&snapshot) {
+        Ok(runtime_character) => runtime_character,
+        Err(reason) => {
+            send_server_message(
+                server,
+                client_id,
+                &ServerMessage::CharacterSelectionFailed { reason },
+            );
+            return;
+        }
+    };
+
     session.state = SessionState::CharacterSelected {
         account_id,
         character_id: snapshot.character_id,
     };
+    runtime_characters
+        .by_client_id
+        .insert(client_id, runtime_character.clone());
     send_server_message(
         server,
         client_id,
@@ -275,6 +297,15 @@ fn handle_select_character(
             account_id
         );
     }
+    info!(
+        "runtime stats for client {} character {} => base={:?} class={:?} equip={:?} final={:?}",
+        client_id,
+        runtime_character.character_id,
+        runtime_character.stats.base,
+        runtime_character.stats.from_class,
+        runtime_character.stats.from_equipment,
+        runtime_character.stats.final_stats
+    );
 }
 
 fn send_server_message(server: &mut RenetServer, client_id: u64, message: &ServerMessage) {

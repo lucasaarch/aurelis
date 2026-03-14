@@ -2,7 +2,7 @@ use chrono::{NaiveDateTime, Utc};
 use diesel::prelude::{Insertable, Queryable};
 use uuid::Uuid;
 
-#[derive(Queryable, Insertable)]
+#[derive(Clone, Queryable, Insertable)]
 #[diesel(table_name = crate::db::schema::inventory_items)]
 pub struct InventoryItemModel {
     pub id: Uuid,

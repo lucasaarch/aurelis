@@ -17,4 +17,51 @@ message LoadPlayableCharacterResponse {
   string base_character_slug = 3;
   string current_class_slug = 4;
   int32 level = 5;
+  string account_id = 6;
+  int64 experience = 7;
+  int64 credits = 8;
+  repeated PersistedInventorySnapshot inventories = 9;
+  repeated PersistedEquipmentSnapshot equipment = 10;
+  repeated PersistedItemInstanceSnapshot item_instances = 11;
+}
+
+message PersistedInventorySnapshot {
+  string id = 1;
+  string inventory_type = 2;
+  int32 capacity = 3;
+  repeated PersistedInventoryItemSnapshot items = 4;
+}
+
+message PersistedInventoryItemSnapshot {
+  string id = 1;
+  string inventory_id = 2;
+  string inventory_type = 3;
+  int32 slot_index = 4;
+  int32 quantity = 5;
+  optional string item_instance_id = 6;
+  optional string item_id = 7;
+  optional string item_slug = 8;
+}
+
+message PersistedEquipmentSnapshot {
+  string slot = 1;
+  string item_instance_id = 2;
+}
+
+message PersistedItemInstanceSnapshot {
+  string id = 1;
+  string item_id = 2;
+  string item_slug = 3;
+  string inventory_type = 4;
+  int32 refinement = 5;
+  int32 gem_slots = 6;
+  string attributes_json = 7;
+  bool in_shared_storage = 8;
+  bool in_trade = 9;
+  repeated PersistedItemInstanceGemSnapshot gems = 10;
+}
+
+message PersistedItemInstanceGemSnapshot {
+  int32 slot_index = 1;
+  string gem_instance_id = 2;
 }
