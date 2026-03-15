@@ -145,17 +145,70 @@ pub struct CharacterSnapshotView {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CharacterSummaryView {
+    pub character_id: Uuid,
+    pub name: String,
+    pub level: i16,
+    pub class_slug: String,
+    pub created_at: String,
+    pub updated_at: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum ClientMessage {
-    Authenticate { token: String },
-    SelectCharacter { character_id: Uuid },
-    UseItem { inventory_type: String, slot: i16 },
-    UseSkill { skill_slug: String },
-    EquipItem { inventory_type: String, slot: i16 },
-    UnequipItem { equipment_slot: String },
+    Login {
+        email: String,
+        password: String,
+    },
+    Authenticate {
+        token: String,
+    },
+    ListCharacters,
+    CreateCharacter {
+        name: String,
+        class_slug: String,
+    },
+    SelectCharacter {
+        character_id: Uuid,
+    },
+    UseItem {
+        inventory_type: String,
+        slot: i16,
+    },
+    UseItemOnEquipment {
+        inventory_type: String,
+        slot: i16,
+        equipment_slot: String,
+    },
+    UseSkill {
+        skill_slug: String,
+    },
+    EquipItem {
+        inventory_type: String,
+        slot: i16,
+    },
+    UnequipItem {
+        equipment_slot: String,
+    },
+    RefineEquipment {
+        equipment_slot: String,
+    },
+    SocketGem {
+        equipment_slot: String,
+        inventory_type: String,
+        slot: i16,
+        socket_index: i16,
+    },
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum ServerMessage {
+    LoginSucceeded {
+        account_id: Uuid,
+    },
+    LoginFailed {
+        reason: String,
+    },
     Authenticated {
         account_id: Uuid,
     },
@@ -165,12 +218,29 @@ pub enum ServerMessage {
     CharacterSelected {
         character_id: Uuid,
     },
+    CharactersListed {
+        characters: Vec<CharacterSummaryView>,
+    },
+    CharacterListFailed {
+        reason: String,
+    },
+    CharacterCreated {
+        character: CharacterSummaryView,
+    },
+    CharacterCreationFailed {
+        reason: String,
+    },
     CharacterSelectionFailed {
         reason: String,
     },
     ItemUsed {
         inventory_type: String,
         slot: i16,
+    },
+    ItemUsedOnEquipment {
+        inventory_type: String,
+        slot: i16,
+        equipment_slot: String,
     },
     ItemUseFailed {
         reason: String,
@@ -190,6 +260,22 @@ pub enum ServerMessage {
         equipment_slot: String,
     },
     EquipmentChangeFailed {
+        reason: String,
+    },
+    EquipmentRefined {
+        equipment_slot: String,
+        old_refinement: i16,
+        new_refinement: i16,
+        outcome: String,
+    },
+    EquipmentRefineFailed {
+        reason: String,
+    },
+    GemSocketed {
+        equipment_slot: String,
+        socket_index: i16,
+    },
+    GemSocketFailed {
         reason: String,
     },
     RuntimeStateUpdated {

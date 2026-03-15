@@ -199,6 +199,7 @@ pub enum SpecialEffect {
     CharacterSkillUnlock {
         tier: CharacterSkillUnlockTier,
     },
+    EquipmentReroll,
     Title {
         title: &'static str,
         duration: TitleDuration,

@@ -8,3 +8,6 @@ pub mod inventory;
 pub mod item;
 pub mod item_instance;
 pub mod jwt;
+
+#[cfg(test)]
+mod tests;

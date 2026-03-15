@@ -649,4 +649,52 @@ impl PgCharacterRepository {
         })
         .await
     }
+
+    pub async fn socket_gem_transaction(
+        &self,
+        source_inventory_id: Uuid,
+        source_slot_index: i16,
+        item_instance_id: Uuid,
+        socket_index: i16,
+        gem_instance_id: Uuid,
+    ) -> Result<(), RepositoryError> {
+        self.run_blocking(move |conn| {
+            conn.transaction::<(), RepositoryError, _>(|conn| {
+                let existing = item_instance_gems::table
+                    .filter(item_instance_gems::item_instance_id.eq(item_instance_id))
+                    .filter(item_instance_gems::slot_index.eq(socket_index))
+                    .first::<ItemInstanceGemModel>(conn)
+                    .optional()?;
+
+                diesel::delete(inventory_items::table)
+                    .filter(inventory_items::inventory_id.eq(source_inventory_id))
+                    .filter(inventory_items::slot_index.eq(source_slot_index))
+                    .execute(conn)?;
+
+                if let Some(existing) = existing {
+                    diesel::delete(
+                        item_instance_gems::table.filter(item_instance_gems::id.eq(existing.id)),
+                    )
+                    .execute(conn)?;
+
+                    diesel::delete(
+                        item_instances::table
+                            .filter(item_instances::id.eq(existing.gem_instance_id)),
+                    )
+                    .execute(conn)?;
+                }
+
+                diesel::insert_into(item_instance_gems::table)
+                    .values(&ItemInstanceGemModel::new(
+                        item_instance_id,
+                        socket_index,
+                        gem_instance_id,
+                    ))
+                    .execute(conn)?;
+
+                Ok(())
+            })
+        })
+        .await
+    }
 }

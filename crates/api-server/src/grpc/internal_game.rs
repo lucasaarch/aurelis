@@ -1,23 +1,33 @@
 use tonic::{Request, Response, Status};
 use uuid::Uuid;
 
+use crate::services::jwt::TokenContext;
 use crate::services::{
-    character::CharacterService, character_skill::CharacterSkillService,
-    equipment::EquipmentService, inventory::InventoryService, item_instance::ItemInstanceService,
+    auth::{AuthService, LoginParams},
+    character::CharacterService,
+    character_skill::CharacterSkillService,
+    equipment::EquipmentService,
+    inventory::InventoryService,
+    item_instance::ItemInstanceService,
 };
+use crate::utils::datetime::format_naive_datetime;
 use shared::models::skill_data::CharacterSkillUnlockTier;
 
 use shared::proto::internal_game::{
-    ConsumeInventoryItemRequest, ConsumeInventoryItemResponse, EquipInventoryItemRequest,
-    EquipInventoryItemResponse, LoadPlayableCharacterRequest, LoadPlayableCharacterResponse,
+    CharacterSummary, ConsumeInventoryItemRequest, ConsumeInventoryItemResponse,
+    CreateCharacterRequest, CreateCharacterResponse, EquipInventoryItemRequest,
+    EquipInventoryItemResponse, GameLoginRequest, GameLoginResponse, ListCharactersRequest,
+    ListCharactersResponse, LoadPlayableCharacterRequest, LoadPlayableCharacterResponse,
     PersistItemInstanceStateRequest, PersistItemInstanceStateResponse, PersistedEquipmentSnapshot,
     PersistedInventoryItemSnapshot, PersistedInventorySnapshot, PersistedItemInstanceGemSnapshot,
-    PersistedItemInstanceSnapshot, UnequipItemRequest, UnequipItemResponse,
-    UnlockCharacterSkillTierRequest, UnlockCharacterSkillTierResponse,
+    PersistedItemInstanceSnapshot, SocketGemRequest, SocketGemResponse, UnequipItemRequest,
+    UnequipItemResponse, UnlockCharacterSkillTierRequest, UnlockCharacterSkillTierResponse,
+    UpdateItemInstanceRefinementRequest, UpdateItemInstanceRefinementResponse,
     internal_game_service_server::InternalGameService,
 };
 
 pub struct GrpcInternalGameServiceImpl {
+    auth_service: AuthService,
     character_service: CharacterService,
     character_skill_service: CharacterSkillService,
     equipment_service: EquipmentService,
@@ -27,6 +37,7 @@ pub struct GrpcInternalGameServiceImpl {
 
 impl GrpcInternalGameServiceImpl {
     pub fn new(
+        auth_service: AuthService,
         character_service: CharacterService,
         character_skill_service: CharacterSkillService,
         equipment_service: EquipmentService,
@@ -34,6 +45,7 @@ impl GrpcInternalGameServiceImpl {
         item_instance_service: ItemInstanceService,
     ) -> Self {
         Self {
+            auth_service,
             character_service,
             character_skill_service,
             equipment_service,
@@ -45,6 +57,66 @@ impl GrpcInternalGameServiceImpl {
 
 #[tonic::async_trait]
 impl InternalGameService for GrpcInternalGameServiceImpl {
+    async fn game_login(
+        &self,
+        request: Request<GameLoginRequest>,
+    ) -> Result<Response<GameLoginResponse>, Status> {
+        let req = request.into_inner();
+        let result = self
+            .auth_service
+            .login(LoginParams {
+                email: req.email,
+                password: req.password,
+                context: TokenContext::Game,
+            })
+            .await?;
+        let account = self
+            .auth_service
+            .authenticate(&result.access_token, TokenContext::Game)
+            .await?;
+
+        Ok(Response::new(GameLoginResponse {
+            account_id: account.id.to_string(),
+        }))
+    }
+
+    async fn list_characters(
+        &self,
+        request: Request<ListCharactersRequest>,
+    ) -> Result<Response<ListCharactersResponse>, Status> {
+        let req = request.into_inner();
+        let account_id = Uuid::parse_str(&req.account_id)
+            .map_err(|_| Status::invalid_argument("invalid account_id"))?;
+        let characters = self.character_service.list_all(account_id).await?;
+
+        Ok(Response::new(ListCharactersResponse {
+            characters: characters.into_iter().map(map_character_summary).collect(),
+        }))
+    }
+
+    async fn create_character(
+        &self,
+        request: Request<CreateCharacterRequest>,
+    ) -> Result<Response<CreateCharacterResponse>, Status> {
+        let req = request.into_inner();
+        let account_id = Uuid::parse_str(&req.account_id)
+            .map_err(|_| Status::invalid_argument("invalid account_id"))?;
+        let character = self
+            .character_service
+            .create(
+                account_id,
+                crate::services::character::CreateCharacterInput {
+                    name: req.name,
+                    class: req.class_slug,
+                },
+            )
+            .await?;
+
+        Ok(Response::new(CreateCharacterResponse {
+            character: Some(map_character_summary(character)),
+        }))
+    }
+
     async fn load_playable_character(
         &self,
         request: Request<LoadPlayableCharacterRequest>,
@@ -241,5 +313,69 @@ impl InternalGameService for GrpcInternalGameServiceImpl {
             .await?;
 
         Ok(Response::new(UnequipItemResponse {}))
+    }
+
+    async fn update_item_instance_refinement(
+        &self,
+        request: Request<UpdateItemInstanceRefinementRequest>,
+    ) -> Result<Response<UpdateItemInstanceRefinementResponse>, Status> {
+        let req = request.into_inner();
+        let account_id = Uuid::parse_str(&req.account_id)
+            .map_err(|_| Status::invalid_argument("invalid account_id"))?;
+        let character_id = Uuid::parse_str(&req.character_id)
+            .map_err(|_| Status::invalid_argument("invalid character_id"))?;
+        let item_instance_id = Uuid::parse_str(&req.item_instance_id)
+            .map_err(|_| Status::invalid_argument("invalid item_instance_id"))?;
+
+        self.item_instance_service
+            .update_refinement(
+                account_id,
+                character_id,
+                item_instance_id,
+                req.refinement as i16,
+            )
+            .await?;
+
+        Ok(Response::new(UpdateItemInstanceRefinementResponse {}))
+    }
+
+    async fn socket_gem(
+        &self,
+        request: Request<SocketGemRequest>,
+    ) -> Result<Response<SocketGemResponse>, Status> {
+        let req = request.into_inner();
+        let account_id = Uuid::parse_str(&req.account_id)
+            .map_err(|_| Status::invalid_argument("invalid account_id"))?;
+        let character_id = Uuid::parse_str(&req.character_id)
+            .map_err(|_| Status::invalid_argument("invalid character_id"))?;
+
+        self.character_service
+            .verify_ownership(account_id, character_id)
+            .await?;
+
+        self.equipment_service
+            .socket_gem(
+                character_id,
+                req.equipment_slot,
+                req.inventory_type,
+                req.slot as i16,
+                req.socket_index as i16,
+            )
+            .await?;
+
+        Ok(Response::new(SocketGemResponse {}))
+    }
+}
+
+fn map_character_summary(
+    character: crate::models::player_character::PlayerCharacterModel,
+) -> CharacterSummary {
+    CharacterSummary {
+        id: character.id.to_string(),
+        name: character.name,
+        level: i32::from(character.level),
+        class_slug: character.current_class_slug,
+        created_at: format_naive_datetime(&character.created_at),
+        updated_at: format_naive_datetime(&character.updated_at),
     }
 }

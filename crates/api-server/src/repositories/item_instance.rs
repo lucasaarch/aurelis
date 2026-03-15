@@ -56,4 +56,22 @@ impl PgItemInstanceRepository {
         })
         .await
     }
+
+    pub async fn update_refinement(
+        &self,
+        item_instance_id: Uuid,
+        refinement: i16,
+    ) -> Result<(), RepositoryError> {
+        self.run_blocking(move |conn| {
+            diesel::update(item_instances::table.find(item_instance_id))
+                .set((
+                    item_instances::refinement.eq(refinement),
+                    item_instances::updated_at.eq(diesel::dsl::now),
+                ))
+                .execute(conn)
+                .map(|_| ())
+                .map_err(Into::into)
+        })
+        .await
+    }
 }

@@ -9,10 +9,12 @@ use uuid::Uuid;
 use shared::models::character_data::CharacterSkillUnlocks;
 use shared::models::skill_data::CharacterSkillUnlockTier;
 use shared::proto::internal_game::{
-    ConsumeInventoryItemRequest, EquipInventoryItemRequest, LoadPlayableCharacterRequest,
-    LoadPlayableCharacterResponse, PersistItemInstanceStateRequest, PersistedEquipmentSnapshot,
-    PersistedInventoryItemSnapshot, PersistedInventorySnapshot, PersistedItemInstanceGemSnapshot,
-    PersistedItemInstanceSnapshot, UnequipItemRequest, UnlockCharacterSkillTierRequest,
+    CharacterSummary, ConsumeInventoryItemRequest, CreateCharacterRequest,
+    EquipInventoryItemRequest, GameLoginRequest, ListCharactersRequest,
+    LoadPlayableCharacterRequest, LoadPlayableCharacterResponse, PersistItemInstanceStateRequest,
+    PersistedEquipmentSnapshot, PersistedInventoryItemSnapshot, PersistedInventorySnapshot,
+    PersistedItemInstanceGemSnapshot, PersistedItemInstanceSnapshot, SocketGemRequest,
+    UnequipItemRequest, UnlockCharacterSkillTierRequest, UpdateItemInstanceRefinementRequest,
     internal_game_service_client::InternalGameServiceClient,
 };
 
@@ -91,6 +93,16 @@ pub struct PersistedItemInstanceGem {
     pub gem_instance_id: Uuid,
 }
 
+#[derive(Debug, Clone)]
+pub struct CharacterSummaryView {
+    pub character_id: Uuid,
+    pub name: String,
+    pub level: i16,
+    pub class_slug: String,
+    pub created_at: String,
+    pub updated_at: String,
+}
+
 impl InternalApi {
     pub fn new(grpc_addr: String, bearer_token: String) -> Self {
         Self {
@@ -122,6 +134,78 @@ impl InternalApi {
                 .into_inner();
 
             map_snapshot(response)
+        })
+    }
+
+    pub fn game_login(&self, email: String, password: String) -> Result<Uuid, String> {
+        self.runtime.block_on(async {
+            let endpoint =
+                Endpoint::from_shared(self.grpc_addr.clone()).map_err(|err| err.to_string())?;
+            let channel = endpoint.connect().await.map_err(|err| err.to_string())?;
+            let interceptor = InternalServerAuthInterceptor::new(self.bearer_token.clone());
+            let mut client = InternalGameServiceClient::with_interceptor(channel, interceptor);
+
+            let response = client
+                .game_login(Request::new(GameLoginRequest { email, password }))
+                .await
+                .map_err(|err| err.to_string())?
+                .into_inner();
+
+            Uuid::parse_str(&response.account_id).map_err(|err| err.to_string())
+        })
+    }
+
+    pub fn list_characters(&self, account_id: Uuid) -> Result<Vec<CharacterSummaryView>, String> {
+        self.runtime.block_on(async {
+            let endpoint =
+                Endpoint::from_shared(self.grpc_addr.clone()).map_err(|err| err.to_string())?;
+            let channel = endpoint.connect().await.map_err(|err| err.to_string())?;
+            let interceptor = InternalServerAuthInterceptor::new(self.bearer_token.clone());
+            let mut client = InternalGameServiceClient::with_interceptor(channel, interceptor);
+
+            let response = client
+                .list_characters(Request::new(ListCharactersRequest {
+                    account_id: account_id.to_string(),
+                }))
+                .await
+                .map_err(|err| err.to_string())?
+                .into_inner();
+
+            response
+                .characters
+                .into_iter()
+                .map(map_character_summary)
+                .collect::<Result<Vec<_>, _>>()
+        })
+    }
+
+    pub fn create_character(
+        &self,
+        account_id: Uuid,
+        name: String,
+        class_slug: String,
+    ) -> Result<CharacterSummaryView, String> {
+        self.runtime.block_on(async {
+            let endpoint =
+                Endpoint::from_shared(self.grpc_addr.clone()).map_err(|err| err.to_string())?;
+            let channel = endpoint.connect().await.map_err(|err| err.to_string())?;
+            let interceptor = InternalServerAuthInterceptor::new(self.bearer_token.clone());
+            let mut client = InternalGameServiceClient::with_interceptor(channel, interceptor);
+
+            let response = client
+                .create_character(Request::new(CreateCharacterRequest {
+                    account_id: account_id.to_string(),
+                    name,
+                    class_slug,
+                }))
+                .await
+                .map_err(|err| err.to_string())?
+                .into_inner();
+
+            let character = response
+                .character
+                .ok_or_else(|| "internal game service returned no character".to_string())?;
+            map_character_summary(character)
         })
     }
 
@@ -267,6 +351,68 @@ impl InternalApi {
             Ok(())
         })
     }
+
+    pub fn update_item_instance_refinement(
+        &self,
+        account_id: Uuid,
+        character_id: Uuid,
+        item_instance_id: Uuid,
+        refinement: i16,
+    ) -> Result<(), String> {
+        self.runtime.block_on(async {
+            let endpoint =
+                Endpoint::from_shared(self.grpc_addr.clone()).map_err(|err| err.to_string())?;
+            let channel = endpoint.connect().await.map_err(|err| err.to_string())?;
+            let interceptor = InternalServerAuthInterceptor::new(self.bearer_token.clone());
+            let mut client = InternalGameServiceClient::with_interceptor(channel, interceptor);
+
+            client
+                .update_item_instance_refinement(Request::new(
+                    UpdateItemInstanceRefinementRequest {
+                        account_id: account_id.to_string(),
+                        character_id: character_id.to_string(),
+                        item_instance_id: item_instance_id.to_string(),
+                        refinement: i32::from(refinement),
+                    },
+                ))
+                .await
+                .map_err(|err| err.to_string())?;
+
+            Ok(())
+        })
+    }
+
+    pub fn socket_gem(
+        &self,
+        account_id: Uuid,
+        character_id: Uuid,
+        equipment_slot: String,
+        inventory_type: String,
+        slot: i16,
+        socket_index: i16,
+    ) -> Result<(), String> {
+        self.runtime.block_on(async {
+            let endpoint =
+                Endpoint::from_shared(self.grpc_addr.clone()).map_err(|err| err.to_string())?;
+            let channel = endpoint.connect().await.map_err(|err| err.to_string())?;
+            let interceptor = InternalServerAuthInterceptor::new(self.bearer_token.clone());
+            let mut client = InternalGameServiceClient::with_interceptor(channel, interceptor);
+
+            client
+                .socket_gem(Request::new(SocketGemRequest {
+                    account_id: account_id.to_string(),
+                    character_id: character_id.to_string(),
+                    equipment_slot,
+                    inventory_type,
+                    slot: i32::from(slot),
+                    socket_index: i32::from(socket_index),
+                }))
+                .await
+                .map_err(|err| err.to_string())?;
+
+            Ok(())
+        })
+    }
 }
 
 fn map_snapshot(
@@ -300,6 +446,17 @@ fn map_snapshot(
             .into_iter()
             .map(map_item_instance)
             .collect::<Result<Vec<_>, _>>()?,
+    })
+}
+
+fn map_character_summary(response: CharacterSummary) -> Result<CharacterSummaryView, String> {
+    Ok(CharacterSummaryView {
+        character_id: Uuid::parse_str(&response.id).map_err(|err| err.to_string())?,
+        name: response.name,
+        level: response.level as i16,
+        class_slug: response.class_slug,
+        created_at: response.created_at,
+        updated_at: response.updated_at,
     })
 }
 

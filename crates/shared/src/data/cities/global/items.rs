@@ -219,6 +219,24 @@ pub static LEARNING_BOOK_INTERMEDIATE: ItemData = ItemData {
     },
 };
 
+pub static EQUIPMENT_REROLL_SCROLL: ItemData = ItemData {
+    slug: "equipment_reroll_scroll",
+    name: "Equipment Reroll Scroll",
+    description: "Rerolls the additional effects of an identified equipped item.",
+    rarity: ItemRarity::Epic,
+    inventory_type: InventoryType::Special,
+    max_stack: 1,
+    kind: ItemKind::Special(SpecialData {
+        effect: SpecialEffect::EquipmentReroll,
+    }),
+    acquisition: ItemAcquisition {
+        droppable: false,
+        purchasable: None,
+        sellable: None,
+        tradable: Tradable::No,
+    },
+};
+
 pub static ITEMS: &[&ItemData] = &[
     &INVENTORY_EXPANSION_EQUIPMENT,
     &INVENTORY_EXPANSION_ACCESSORY,
@@ -229,4 +247,5 @@ pub static ITEMS: &[&ItemData] = &[
     &INVENTORY_EXPANSION_KIT,
     &LEARNING_BOOK_BEGINNER,
     &LEARNING_BOOK_INTERMEDIATE,
+    &EQUIPMENT_REROLL_SCROLL,
 ];

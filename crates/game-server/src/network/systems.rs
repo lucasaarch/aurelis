@@ -12,7 +12,9 @@ use crate::events::player_connection::{PlayerConnected, PlayerDisconnected};
 use crate::network::auth::GameTokenVerifier;
 use crate::resources::client_sessions::{ClientSession, ClientSessions, SessionState};
 use crate::resources::connected_players::ConnectedPlayers;
-use crate::resources::internal_api::InternalApi;
+use crate::resources::internal_api::{
+    CharacterSummaryView as InternalCharacterSummaryView, InternalApi,
+};
 use crate::resources::runtime_characters::RuntimeCharacters;
 use crate::resources::server_boot_state::ServerBootState;
 use crate::runtime::builder::build_runtime_character;
@@ -21,10 +23,12 @@ use crate::runtime::client_snapshot::{
     build_inventory_views,
 };
 use crate::runtime::equipment_change::{equip_item, unequip_item};
+use crate::runtime::gem_socket::socket_gem;
+use crate::runtime::refinement::{RefinementOutcome, refine_equipment};
 use crate::runtime::use_item::{UseItemRequest, use_item};
 use crate::runtime::use_skill::use_skill;
 use crate::server_config::ServerRuntimeConfig;
-use shared::net::{ClientMessage, ServerMessage};
+use shared::net::{CharacterSummaryView, ClientMessage, ServerMessage};
 
 pub fn setup_server(mut commands: Commands, config: Res<ServerRuntimeConfig>) {
     let server_addr: SocketAddr = config
@@ -147,6 +151,16 @@ pub fn process_client_messages(
             };
 
             match message {
+                ClientMessage::Login { email, password } => {
+                    handle_login(
+                        &mut server,
+                        &mut sessions,
+                        &internal_api,
+                        client_id,
+                        email,
+                        password,
+                    );
+                }
                 ClientMessage::Authenticate { token } => {
                     handle_authenticate(
                         &mut server,
@@ -166,6 +180,19 @@ pub fn process_client_messages(
                         character_id,
                     );
                 }
+                ClientMessage::ListCharacters => {
+                    handle_list_characters(&mut server, &sessions, &internal_api, client_id);
+                }
+                ClientMessage::CreateCharacter { name, class_slug } => {
+                    handle_create_character(
+                        &mut server,
+                        &sessions,
+                        &internal_api,
+                        client_id,
+                        name,
+                        class_slug,
+                    );
+                }
                 ClientMessage::UseItem {
                     inventory_type,
                     slot,
@@ -178,6 +205,22 @@ pub fn process_client_messages(
                         client_id,
                         inventory_type,
                         slot,
+                    );
+                }
+                ClientMessage::UseItemOnEquipment {
+                    inventory_type,
+                    slot,
+                    equipment_slot,
+                } => {
+                    handle_use_item_on_equipment(
+                        &mut server,
+                        &sessions,
+                        &mut runtime_characters,
+                        &internal_api,
+                        client_id,
+                        inventory_type,
+                        slot,
+                        equipment_slot,
                     );
                 }
                 ClientMessage::UseSkill { skill_slug } => {
@@ -213,7 +256,68 @@ pub fn process_client_messages(
                         equipment_slot,
                     );
                 }
+                ClientMessage::RefineEquipment { equipment_slot } => {
+                    handle_refine_equipment(
+                        &mut server,
+                        &sessions,
+                        &mut runtime_characters,
+                        &internal_api,
+                        client_id,
+                        equipment_slot,
+                    );
+                }
+                ClientMessage::SocketGem {
+                    equipment_slot,
+                    inventory_type,
+                    slot,
+                    socket_index,
+                } => {
+                    handle_socket_gem(
+                        &mut server,
+                        &sessions,
+                        &mut runtime_characters,
+                        &internal_api,
+                        client_id,
+                        equipment_slot,
+                        inventory_type,
+                        slot,
+                        socket_index,
+                    );
+                }
             }
+        }
+    }
+}
+
+fn handle_login(
+    server: &mut RenetServer,
+    sessions: &mut ClientSessions,
+    internal_api: &InternalApi,
+    client_id: u64,
+    email: String,
+    password: String,
+) {
+    let Some(session) = sessions.by_client_id.get_mut(&client_id) else {
+        return;
+    };
+
+    match internal_api.game_login(email, password) {
+        Ok(account_id) => {
+            session.state = SessionState::Authenticated { account_id };
+            send_server_message(
+                server,
+                client_id,
+                &ServerMessage::LoginSucceeded { account_id },
+            );
+            send_server_message(
+                server,
+                client_id,
+                &ServerMessage::Authenticated { account_id },
+            );
+            info!("client {} logged in as account {}", client_id, account_id);
+        }
+        Err(reason) => {
+            send_server_message(server, client_id, &ServerMessage::LoginFailed { reason });
         }
     }
 }
@@ -382,6 +486,110 @@ fn handle_select_character(
     send_runtime_state(server, client_id, &runtime_character);
 }
 
+fn handle_list_characters(
+    server: &mut RenetServer,
+    sessions: &ClientSessions,
+    internal_api: &InternalApi,
+    client_id: u64,
+) {
+    let Some(session) = sessions.by_client_id.get(&client_id) else {
+        return;
+    };
+    let account_id = match session.state {
+        SessionState::Authenticated { account_id }
+        | SessionState::CharacterSelected { account_id, .. } => account_id,
+        SessionState::ConnectedUnauthenticated => {
+            send_server_message(
+                server,
+                client_id,
+                &ServerMessage::CharacterListFailed {
+                    reason: "client is not authenticated".to_string(),
+                },
+            );
+            return;
+        }
+    };
+
+    match internal_api.list_characters(account_id) {
+        Ok(characters) => {
+            send_server_message(
+                server,
+                client_id,
+                &ServerMessage::CharactersListed {
+                    characters: characters
+                        .into_iter()
+                        .map(map_character_summary_view)
+                        .collect(),
+                },
+            );
+        }
+        Err(reason) => {
+            send_server_message(
+                server,
+                client_id,
+                &ServerMessage::CharacterListFailed { reason },
+            );
+        }
+    }
+}
+
+fn handle_create_character(
+    server: &mut RenetServer,
+    sessions: &ClientSessions,
+    internal_api: &InternalApi,
+    client_id: u64,
+    name: String,
+    class_slug: String,
+) {
+    let Some(session) = sessions.by_client_id.get(&client_id) else {
+        return;
+    };
+    let account_id = match session.state {
+        SessionState::Authenticated { account_id }
+        | SessionState::CharacterSelected { account_id, .. } => account_id,
+        SessionState::ConnectedUnauthenticated => {
+            send_server_message(
+                server,
+                client_id,
+                &ServerMessage::CharacterCreationFailed {
+                    reason: "client is not authenticated".to_string(),
+                },
+            );
+            return;
+        }
+    };
+
+    match internal_api.create_character(account_id, name, class_slug) {
+        Ok(character) => {
+            send_server_message(
+                server,
+                client_id,
+                &ServerMessage::CharacterCreated {
+                    character: map_character_summary_view(character),
+                },
+            );
+        }
+        Err(reason) => {
+            send_server_message(
+                server,
+                client_id,
+                &ServerMessage::CharacterCreationFailed { reason },
+            );
+        }
+    }
+}
+
+fn map_character_summary_view(summary: InternalCharacterSummaryView) -> CharacterSummaryView {
+    CharacterSummaryView {
+        character_id: summary.character_id,
+        name: summary.name,
+        level: summary.level,
+        class_slug: summary.class_slug,
+        created_at: summary.created_at,
+        updated_at: summary.updated_at,
+    }
+}
+
 fn handle_use_item(
     server: &mut RenetServer,
     sessions: &ClientSessions,
@@ -421,10 +629,11 @@ fn handle_use_item(
     };
 
     let result = match use_item(UseItemRequest {
-        internal_api,
+        api: internal_api,
         snapshot: &snapshot,
         inventory_type: &inventory_type,
         slot,
+        target_equipment_slot: None,
     }) {
         Ok(result) => result,
         Err(reason) => {
@@ -442,6 +651,78 @@ fn handle_use_item(
         &ServerMessage::ItemUsed {
             inventory_type,
             slot,
+        },
+    );
+    if let Some(runtime_character) = runtime_characters.by_client_id.get(&client_id) {
+        send_character_inventory(server, client_id, &result.snapshot, runtime_character);
+        send_character_stats(server, client_id, runtime_character);
+        send_runtime_state(server, client_id, runtime_character);
+    }
+}
+
+fn handle_use_item_on_equipment(
+    server: &mut RenetServer,
+    sessions: &ClientSessions,
+    runtime_characters: &mut RuntimeCharacters,
+    internal_api: &InternalApi,
+    client_id: u64,
+    inventory_type: String,
+    slot: i16,
+    equipment_slot: String,
+) {
+    let Some(session) = sessions.by_client_id.get(&client_id) else {
+        return;
+    };
+
+    let (account_id, character_id) = match session.state {
+        SessionState::CharacterSelected {
+            account_id,
+            character_id,
+        } => (account_id, character_id),
+        SessionState::Authenticated { .. } | SessionState::ConnectedUnauthenticated => {
+            send_server_message(
+                server,
+                client_id,
+                &ServerMessage::ItemUseFailed {
+                    reason: "client has no selected character".to_string(),
+                },
+            );
+            return;
+        }
+    };
+
+    let snapshot = match internal_api.load_playable_character(account_id, character_id) {
+        Ok(snapshot) => snapshot,
+        Err(reason) => {
+            send_server_message(server, client_id, &ServerMessage::ItemUseFailed { reason });
+            return;
+        }
+    };
+
+    let result = match use_item(UseItemRequest {
+        api: internal_api,
+        snapshot: &snapshot,
+        inventory_type: &inventory_type,
+        slot,
+        target_equipment_slot: Some(&equipment_slot),
+    }) {
+        Ok(result) => result,
+        Err(reason) => {
+            send_server_message(server, client_id, &ServerMessage::ItemUseFailed { reason });
+            return;
+        }
+    };
+
+    runtime_characters
+        .by_client_id
+        .insert(client_id, result.runtime_character);
+    send_server_message(
+        server,
+        client_id,
+        &ServerMessage::ItemUsedOnEquipment {
+            inventory_type,
+            slot,
+            equipment_slot,
         },
     );
     if let Some(runtime_character) = runtime_characters.by_client_id.get(&client_id) {
@@ -660,6 +941,193 @@ fn handle_unequip_item(
         server,
         client_id,
         &ServerMessage::ItemUnequipped { equipment_slot },
+    );
+    send_character_inventory(server, client_id, &reloaded, &runtime_character);
+    send_character_stats(server, client_id, &runtime_character);
+    send_runtime_state(server, client_id, &runtime_character);
+}
+
+fn handle_refine_equipment(
+    server: &mut RenetServer,
+    sessions: &ClientSessions,
+    runtime_characters: &mut RuntimeCharacters,
+    internal_api: &InternalApi,
+    client_id: u64,
+    equipment_slot: String,
+) {
+    let Some(session) = sessions.by_client_id.get(&client_id) else {
+        return;
+    };
+    let (account_id, character_id) = match session.state {
+        SessionState::CharacterSelected {
+            account_id,
+            character_id,
+        } => (account_id, character_id),
+        _ => {
+            send_server_message(
+                server,
+                client_id,
+                &ServerMessage::EquipmentRefineFailed {
+                    reason: "client has no selected character".to_string(),
+                },
+            );
+            return;
+        }
+    };
+
+    let snapshot = match internal_api.load_playable_character(account_id, character_id) {
+        Ok(snapshot) => snapshot,
+        Err(reason) => {
+            send_server_message(
+                server,
+                client_id,
+                &ServerMessage::EquipmentRefineFailed { reason },
+            );
+            return;
+        }
+    };
+
+    let (reloaded, outcome) = match refine_equipment(internal_api, &snapshot, &equipment_slot) {
+        Ok(value) => value,
+        Err(reason) => {
+            send_server_message(
+                server,
+                client_id,
+                &ServerMessage::EquipmentRefineFailed { reason },
+            );
+            return;
+        }
+    };
+    let runtime_character = match build_runtime_character(&reloaded) {
+        Ok(runtime) => runtime,
+        Err(reason) => {
+            send_server_message(
+                server,
+                client_id,
+                &ServerMessage::EquipmentRefineFailed { reason },
+            );
+            return;
+        }
+    };
+
+    runtime_characters
+        .by_client_id
+        .insert(client_id, runtime_character.clone());
+
+    let (old_refinement, new_refinement, outcome_label) = match outcome {
+        RefinementOutcome::Success {
+            old_refinement,
+            new_refinement,
+        } => (old_refinement, new_refinement, "success".to_string()),
+        RefinementOutcome::FailedNoChange { old_refinement } => (
+            old_refinement,
+            old_refinement,
+            "failed_no_change".to_string(),
+        ),
+        RefinementOutcome::FailedReset {
+            old_refinement,
+            new_refinement,
+        } => (old_refinement, new_refinement, "failed_reset".to_string()),
+    };
+
+    send_server_message(
+        server,
+        client_id,
+        &ServerMessage::EquipmentRefined {
+            equipment_slot,
+            old_refinement,
+            new_refinement,
+            outcome: outcome_label,
+        },
+    );
+    send_character_inventory(server, client_id, &reloaded, &runtime_character);
+    send_character_stats(server, client_id, &runtime_character);
+    send_runtime_state(server, client_id, &runtime_character);
+}
+
+fn handle_socket_gem(
+    server: &mut RenetServer,
+    sessions: &ClientSessions,
+    runtime_characters: &mut RuntimeCharacters,
+    internal_api: &InternalApi,
+    client_id: u64,
+    equipment_slot: String,
+    inventory_type: String,
+    slot: i16,
+    socket_index: i16,
+) {
+    let Some(session) = sessions.by_client_id.get(&client_id) else {
+        return;
+    };
+    let (account_id, character_id) = match session.state {
+        SessionState::CharacterSelected {
+            account_id,
+            character_id,
+        } => (account_id, character_id),
+        _ => {
+            send_server_message(
+                server,
+                client_id,
+                &ServerMessage::GemSocketFailed {
+                    reason: "client has no selected character".to_string(),
+                },
+            );
+            return;
+        }
+    };
+
+    let snapshot = match internal_api.load_playable_character(account_id, character_id) {
+        Ok(snapshot) => snapshot,
+        Err(reason) => {
+            send_server_message(
+                server,
+                client_id,
+                &ServerMessage::GemSocketFailed { reason },
+            );
+            return;
+        }
+    };
+
+    let reloaded = match socket_gem(
+        internal_api,
+        &snapshot,
+        &equipment_slot,
+        &inventory_type,
+        slot,
+        socket_index,
+    ) {
+        Ok(snapshot) => snapshot,
+        Err(reason) => {
+            send_server_message(
+                server,
+                client_id,
+                &ServerMessage::GemSocketFailed { reason },
+            );
+            return;
+        }
+    };
+    let runtime_character = match build_runtime_character(&reloaded) {
+        Ok(runtime) => runtime,
+        Err(reason) => {
+            send_server_message(
+                server,
+                client_id,
+                &ServerMessage::GemSocketFailed { reason },
+            );
+            return;
+        }
+    };
+
+    runtime_characters
+        .by_client_id
+        .insert(client_id, runtime_character.clone());
+    send_server_message(
+        server,
+        client_id,
+        &ServerMessage::GemSocketed {
+            equipment_slot,
+            socket_index,
+        },
     );
     send_character_inventory(server, client_id, &reloaded, &runtime_character);
     send_character_stats(server, client_id, &runtime_character);

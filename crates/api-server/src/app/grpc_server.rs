@@ -5,27 +5,14 @@ use tonic_reflection::server::Builder as ReflectionBuilder;
 use tracing::info;
 
 use crate::app::state::AppState;
-use crate::grpc::auth::GrpcAuthServiceImpl;
-use crate::grpc::character::GrpcCharacterServiceImpl;
 use crate::grpc::internal_game::GrpcInternalGameServiceImpl;
-use crate::grpc::inventory::GrpcInventoryServiceImpl;
-use shared::proto::auth::auth_service_server::AuthServiceServer;
-use shared::proto::character::character_service_server::CharacterServiceServer;
 use shared::proto::internal_game::internal_game_service_server::InternalGameServiceServer;
-use shared::proto::inventory::inventory_service_server::InventoryServiceServer;
 
 pub async fn serve_grpc(state: Arc<AppState>, addr: &str) {
     info!("gRPC server listening on {addr}");
 
-    let grpc_auth_service = GrpcAuthServiceImpl::new(state.auth_service.clone());
-    let grpc_character_service =
-        GrpcCharacterServiceImpl::new(state.auth_service.clone(), state.character_service.clone());
-    let grpc_inventory_service = GrpcInventoryServiceImpl::new(
-        state.auth_service.clone(),
-        state.inventory_service.clone(),
-        state.character_service.clone(),
-    );
     let grpc_internal_game_service = GrpcInternalGameServiceImpl::new(
+        state.auth_service.clone(),
         state.character_service.clone(),
         state.character_skill_service.clone(),
         state.equipment_service.clone(),
@@ -41,9 +28,6 @@ pub async fn serve_grpc(state: Arc<AppState>, addr: &str) {
                 .build_v1()
                 .unwrap(),
         )
-        .add_service(AuthServiceServer::new(grpc_auth_service))
-        .add_service(CharacterServiceServer::new(grpc_character_service))
-        .add_service(InventoryServiceServer::new(grpc_inventory_service))
         .add_service(InternalGameServiceServer::with_interceptor(
             grpc_internal_game_service,
             move |request: tonic::Request<()>| {

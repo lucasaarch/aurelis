@@ -3,12 +3,53 @@ syntax = "proto3";
 package internal_game;
 
 service InternalGameService {
+  rpc GameLogin(GameLoginRequest) returns (GameLoginResponse);
+  rpc ListCharacters(ListCharactersRequest) returns (ListCharactersResponse);
+  rpc CreateCharacter(CreateCharacterRequest) returns (CreateCharacterResponse);
   rpc LoadPlayableCharacter(LoadPlayableCharacterRequest) returns (LoadPlayableCharacterResponse);
   rpc PersistItemInstanceState(PersistItemInstanceStateRequest) returns (PersistItemInstanceStateResponse);
   rpc UnlockCharacterSkillTier(UnlockCharacterSkillTierRequest) returns (UnlockCharacterSkillTierResponse);
   rpc ConsumeInventoryItem(ConsumeInventoryItemRequest) returns (ConsumeInventoryItemResponse);
   rpc EquipInventoryItem(EquipInventoryItemRequest) returns (EquipInventoryItemResponse);
   rpc UnequipItem(UnequipItemRequest) returns (UnequipItemResponse);
+  rpc UpdateItemInstanceRefinement(UpdateItemInstanceRefinementRequest) returns (UpdateItemInstanceRefinementResponse);
+  rpc SocketGem(SocketGemRequest) returns (SocketGemResponse);
+}
+
+message GameLoginRequest {
+  string email = 1;
+  string password = 2;
+}
+
+message GameLoginResponse {
+  string account_id = 1;
+}
+
+message CharacterSummary {
+  string id = 1;
+  string name = 2;
+  int32 level = 3;
+  string class_slug = 4;
+  string created_at = 5;
+  string updated_at = 6;
+}
+
+message ListCharactersRequest {
+  string account_id = 1;
+}
+
+message ListCharactersResponse {
+  repeated CharacterSummary characters = 1;
+}
+
+message CreateCharacterRequest {
+  string account_id = 1;
+  string name = 2;
+  string class_slug = 3;
+}
+
+message CreateCharacterResponse {
+  CharacterSummary character = 1;
 }
 
 message LoadPlayableCharacterRequest {
@@ -117,3 +158,23 @@ message UnequipItemRequest {
 }
 
 message UnequipItemResponse {}
+
+message UpdateItemInstanceRefinementRequest {
+  string account_id = 1;
+  string character_id = 2;
+  string item_instance_id = 3;
+  int32 refinement = 4;
+}
+
+message UpdateItemInstanceRefinementResponse {}
+
+message SocketGemRequest {
+  string account_id = 1;
+  string character_id = 2;
+  string equipment_slot = 3;
+  string inventory_type = 4;
+  int32 slot = 5;
+  int32 socket_index = 6;
+}
+
+message SocketGemResponse {}
