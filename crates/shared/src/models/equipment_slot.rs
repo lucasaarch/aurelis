@@ -1,6 +1,8 @@
+use serde::{Deserialize, Serialize};
+
 use crate::models::combat_stats::{CombatStats, StatKey};
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum EquipmentSlot {
     Weapon,
     Head,

@@ -19,6 +19,7 @@ pub struct UseItemRequest<'a> {
 }
 
 pub struct UseItemResult {
+    pub snapshot: PlayableCharacterSnapshot,
     pub runtime_character: RuntimeCharacter,
 }
 
@@ -95,5 +96,8 @@ fn use_character_skill_unlock_item(
         .load_playable_character(request.snapshot.account_id, request.snapshot.character_id)?;
     let runtime_character = build_runtime_character(&reloaded)?;
 
-    Ok(UseItemResult { runtime_character })
+    Ok(UseItemResult {
+        snapshot: reloaded,
+        runtime_character,
+    })
 }

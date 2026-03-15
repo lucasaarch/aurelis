@@ -1,3 +1,5 @@
+use serde::{Deserialize, Serialize};
+
 use crate::models::combat_stats::CombatStats;
 
 pub struct CharacterData {
@@ -18,6 +20,21 @@ pub struct CharacterBaseStats {
     pub magical_def: i32,
     pub move_spd: i32,
     pub atk_spd: i32,
+    pub damage_reduction: i32,
+    pub crit_chance: i32,
+    pub crit_damage: i32,
+    pub accuracy: i32,
+    pub physical_attack_level: i32,
+    pub magical_attack_level: i32,
+    pub physical_pen: i32,
+    pub magical_pen: i32,
+    pub hp_regen: i32,
+    pub mp_regen: i32,
+    pub life_steal: i32,
+    pub cooldown_reduction: i32,
+    pub crit_resistance: i32,
+    pub knockback_resistance: i32,
+    pub cc_resistance: i32,
 }
 
 pub struct ClassPathData {
@@ -33,7 +50,7 @@ pub struct ClassData {
     pub stat_bonuses: CharacterBaseStats,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum CombatAffinity {
     Neutral,
     Physical,
@@ -67,7 +84,7 @@ pub struct CharacterProgress {
     pub tier: CharacterClassTier,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
 pub struct CharacterSkillUnlocks {
     pub beginner: bool,
     pub intermediate: bool,
@@ -169,21 +186,21 @@ impl From<CharacterBaseStats> for CombatStats {
                 atk_spd: value.atk_spd,
             },
             secondary: crate::models::combat_stats::CombatSecondaryStats {
-                damage_reduction: 0,
-                crit_chance: 0,
-                crit_damage: 0,
-                accuracy: 0,
-                physical_attack_level: 0,
-                magical_attack_level: 0,
-                physical_pen: 0,
-                magical_pen: 0,
-                hp_regen: 0,
-                mp_regen: 0,
-                life_steal: 0,
-                cooldown_reduction: 0,
-                crit_resistance: 0,
-                knockback_resistance: 0,
-                cc_resistance: 0,
+                damage_reduction: value.damage_reduction,
+                crit_chance: value.crit_chance,
+                crit_damage: value.crit_damage,
+                accuracy: value.accuracy,
+                physical_attack_level: value.physical_attack_level,
+                magical_attack_level: value.magical_attack_level,
+                physical_pen: value.physical_pen,
+                magical_pen: value.magical_pen,
+                hp_regen: value.hp_regen,
+                mp_regen: value.mp_regen,
+                life_steal: value.life_steal,
+                cooldown_reduction: value.cooldown_reduction,
+                crit_resistance: value.crit_resistance,
+                knockback_resistance: value.knockback_resistance,
+                cc_resistance: value.cc_resistance,
             },
         }
     }

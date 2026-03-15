@@ -16,6 +16,10 @@ use crate::resources::internal_api::InternalApi;
 use crate::resources::runtime_characters::RuntimeCharacters;
 use crate::resources::server_boot_state::ServerBootState;
 use crate::runtime::builder::build_runtime_character;
+use crate::runtime::client_snapshot::{
+    build_character_snapshot_view, build_character_stats_snapshot, build_equipped_views,
+    build_inventory_views,
+};
 use crate::runtime::use_item::{UseItemRequest, use_item};
 use crate::runtime::use_skill::use_skill;
 use crate::server_config::ServerRuntimeConfig;
@@ -200,6 +204,9 @@ pub fn tick_runtime_characters(
         let cooldowns_changed = runtime_character.tick_skill_cooldowns(elapsed_ms);
         if buffs_changed || cooldowns_changed {
             send_runtime_state(server.as_mut(), *client_id, runtime_character);
+            if buffs_changed {
+                send_character_stats(server.as_mut(), *client_id, runtime_character);
+            }
         }
     }
 }
@@ -346,6 +353,7 @@ fn handle_select_character(
         runtime_character.stats.from_equipment,
         runtime_character.stats.final_stats
     );
+    send_character_snapshot(server, client_id, &runtime_character, &snapshot);
     send_runtime_state(server, client_id, &runtime_character);
 }
 
@@ -412,6 +420,8 @@ fn handle_use_item(
         },
     );
     if let Some(runtime_character) = runtime_characters.by_client_id.get(&client_id) {
+        send_character_inventory(server, client_id, &result.snapshot, runtime_character);
+        send_character_stats(server, client_id, runtime_character);
         send_runtime_state(server, client_id, runtime_character);
     }
 }
@@ -458,6 +468,7 @@ fn handle_use_skill(
     }
 
     send_server_message(server, client_id, &ServerMessage::SkillUsed { skill_slug });
+    send_character_stats(server, client_id, runtime_character);
     send_runtime_state(server, client_id, runtime_character);
 }
 
@@ -481,4 +492,62 @@ fn send_runtime_state(
             skill_cooldowns: runtime_character.skill_cooldowns(),
         },
     );
+}
+
+fn send_character_snapshot(
+    server: &mut RenetServer,
+    client_id: u64,
+    runtime_character: &crate::runtime::character::RuntimeCharacter,
+    snapshot: &crate::resources::internal_api::PlayableCharacterSnapshot,
+) {
+    match build_character_snapshot_view(runtime_character, snapshot) {
+        Ok(snapshot) => send_server_message(
+            server,
+            client_id,
+            &ServerMessage::CharacterSnapshotLoaded { snapshot },
+        ),
+        Err(reason) => warn!(
+            "failed to build character snapshot for client {} character {}: {}",
+            client_id, runtime_character.character_id, reason
+        ),
+    }
+}
+
+fn send_character_stats(
+    server: &mut RenetServer,
+    client_id: u64,
+    runtime_character: &crate::runtime::character::RuntimeCharacter,
+) {
+    send_server_message(
+        server,
+        client_id,
+        &ServerMessage::CharacterStatsUpdated {
+            stats: build_character_stats_snapshot(runtime_character),
+        },
+    );
+}
+
+fn send_character_inventory(
+    server: &mut RenetServer,
+    client_id: u64,
+    snapshot: &crate::resources::internal_api::PlayableCharacterSnapshot,
+    runtime_character: &crate::runtime::character::RuntimeCharacter,
+) {
+    match (
+        build_inventory_views(snapshot),
+        build_equipped_views(snapshot, runtime_character),
+    ) {
+        (Ok(inventories), Ok(equipped)) => send_server_message(
+            server,
+            client_id,
+            &ServerMessage::CharacterInventoryUpdated {
+                inventories,
+                equipped,
+            },
+        ),
+        (Err(reason), _) | (_, Err(reason)) => warn!(
+            "failed to build character inventory payload for client {} character {}: {}",
+            client_id, runtime_character.character_id, reason
+        ),
+    }
 }

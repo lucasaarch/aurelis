@@ -8,7 +8,7 @@ pub enum RewardStatKey {
     CreditGain,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub struct RewardStats {
     pub experience_gain: i32,
     pub drop_rate: i32,

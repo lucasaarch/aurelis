@@ -23,8 +23,8 @@ fn builds_runtime_character_with_base_stats_only() {
 
     let runtime = build_runtime_character(&snapshot).expect("runtime build should succeed");
 
-    assert_eq!(runtime.stats.base.core.hp, 520);
-    assert_eq!(runtime.stats.base.core.physical_atk, 48);
+    assert_eq!(runtime.stats.base.core.hp, 30_000);
+    assert_eq!(runtime.stats.base.core.physical_atk, 446);
     assert_eq!(runtime.stats.from_class.core.hp, 0);
     assert_eq!(runtime.stats.from_equipment.core.hp, 0);
     assert_eq!(
@@ -41,8 +41,9 @@ fn builds_runtime_character_with_base_stats_only() {
         vec!["kael_slash".to_string(), "kael_guarding_strike".to_string(),]
     );
     assert_eq!(runtime.rewards.final_stats.experience_gain, 0);
-    assert_eq!(runtime.stats.final_stats.core.hp, 520);
-    assert_eq!(runtime.stats.final_stats.core.physical_def, 32);
+    assert_eq!(runtime.stats.final_stats.core.hp, 30_000);
+    assert_eq!(runtime.stats.final_stats.core.physical_def, 113);
+    assert_eq!(runtime.stats.final_stats.secondary.crit_damage, 150);
     assert_eq!(runtime.stats.final_stats.secondary.damage_reduction, 0);
 }
 
@@ -53,11 +54,11 @@ fn builds_runtime_character_with_class_bonus() {
 
     let runtime = build_runtime_character(&snapshot).expect("runtime build should succeed");
 
-    assert_eq!(runtime.stats.base.core.hp, 520);
+    assert_eq!(runtime.stats.base.core.hp, 30_000);
     assert_eq!(runtime.stats.from_class.core.hp, 320);
     assert_eq!(runtime.stats.from_class.core.physical_atk, 32);
-    assert_eq!(runtime.stats.final_stats.core.hp, 840);
-    assert_eq!(runtime.stats.final_stats.core.physical_atk, 80);
+    assert_eq!(runtime.stats.final_stats.core.hp, 30_320);
+    assert_eq!(runtime.stats.final_stats.core.physical_atk, 478);
     assert_eq!(runtime.stats.final_stats.core.atk_spd, 108);
     assert_eq!(runtime.combat_affinity, CombatAffinity::Physical);
     assert_eq!(
@@ -127,15 +128,15 @@ fn builds_runtime_character_with_fixed_equipment_stats() {
         5
     );
 
-    assert_eq!(runtime.stats.final_stats.core.hp, 960);
-    assert_eq!(runtime.stats.final_stats.core.physical_atk, 122);
-    assert_eq!(runtime.stats.final_stats.core.physical_def, 110);
-    assert_eq!(runtime.stats.final_stats.core.magical_def, 51);
+    assert_eq!(runtime.stats.final_stats.core.hp, 30_440);
+    assert_eq!(runtime.stats.final_stats.core.physical_atk, 520);
+    assert_eq!(runtime.stats.final_stats.core.physical_def, 191);
+    assert_eq!(runtime.stats.final_stats.core.magical_def, 150);
     assert_eq!(runtime.stats.final_stats.core.atk_spd, 115);
     assert_eq!(runtime.stats.final_stats.core.move_spd, 114);
     assert_eq!(runtime.stats.final_stats.secondary.damage_reduction, 6);
     assert_eq!(runtime.stats.final_stats.secondary.crit_chance, 10);
-    assert_eq!(runtime.stats.final_stats.secondary.crit_damage, 5);
+    assert_eq!(runtime.stats.final_stats.secondary.crit_damage, 155);
     assert_eq!(
         runtime.available_skill_slugs,
         vec![
@@ -236,6 +237,115 @@ fn prints_runtime_character_stat_breakdown() {
 }
 
 #[test]
+fn prints_full_runtime_character_audit() {
+    let mut snapshot = snapshot_base_only();
+    snapshot.current_class_slug = "kael_royal_sentinel".to_string();
+    snapshot.level = 20;
+    snapshot.equipment = vec![
+        equipment("weapon", "11111111-1111-1111-1111-111111111111"),
+        equipment("chest", "22222222-2222-2222-2222-222222222222"),
+        equipment("legs", "33333333-3333-3333-3333-333333333333"),
+        equipment("gloves", "44444444-4444-4444-4444-444444444444"),
+        equipment("shoes", "55555555-5555-5555-5555-555555555555"),
+    ];
+
+    let mut blade = item_instance(
+        "11111111-1111-1111-1111-111111111111",
+        "kael_training_blade",
+    );
+    blade.refinement = 3;
+    blade.attributes_json = r#"{
+        "identified": true,
+        "roll_bias": "physical",
+        "reroll_count": 1,
+        "additional_effects": [
+            { "id": "roll_phys_level", "stat": "physical_attack_level", "kind": "flat", "value": 375 },
+            { "id": "roll_crit_damage", "stat": "crit_damage", "kind": "flat", "value": 5 },
+            { "id": "roll_phys_atk_pct", "stat": "physical_atk", "kind": "percent", "value": 1000 }
+        ]
+    }"#
+    .to_string();
+    blade.gems = vec![PersistedItemInstanceGem {
+        slot_index: 0,
+        gem_instance_id: Uuid::parse_str("88888888-8888-8888-8888-888888888888").unwrap(),
+    }];
+
+    let mut rolled_gem = item_instance("88888888-8888-8888-8888-888888888888", "chaos_gem");
+    rolled_gem.attributes_json = r#"{
+        "identified": true,
+        "roll_bias": "neutral",
+        "reroll_count": 0,
+        "additional_effects": [
+            { "id": "gem_roll_hp", "stat": "hp", "kind": "flat", "value": 72 }
+        ]
+    }"#
+    .to_string();
+
+    snapshot.item_instances = vec![
+        blade,
+        item_instance(
+            "22222222-2222-2222-2222-222222222222",
+            "kael_squire_chestplate",
+        ),
+        item_instance(
+            "33333333-3333-3333-3333-333333333333",
+            "kael_squire_legguards",
+        ),
+        item_instance(
+            "44444444-4444-4444-4444-444444444444",
+            "kael_squire_gauntlets",
+        ),
+        item_instance("55555555-5555-5555-5555-555555555555", "kael_squire_boots"),
+        rolled_gem,
+    ];
+
+    let mut runtime = build_runtime_character(&snapshot).expect("runtime build should succeed");
+    use_skill(&mut runtime, "sentinel_steel_pulse").expect("advantage should activate");
+
+    println!(
+        "\nFull runtime audit for {} ({})\nAffinity: {:?}\nCurrent HP: {}\nCurrent MP: {}\nAvailable Skills: {:?}\nActive Buffs: {:?}\nCooldowns: {:?}\n{}\n{}\n{}\n{}\n{}\n{}\n{}\n{}",
+        runtime.name,
+        runtime.current_class_slug,
+        runtime.combat_affinity,
+        runtime.resources.current_hp,
+        runtime.resources.current_mp,
+        runtime.available_skill_slugs,
+        runtime
+            .active_buffs()
+            .iter()
+            .map(|buff| format!("{}:{}ms", buff.effect_slug, buff.remaining_ms))
+            .collect::<Vec<_>>(),
+        runtime
+            .skill_cooldowns()
+            .iter()
+            .map(|cooldown| format!("{}:{}ms", cooldown.skill_slug, cooldown.remaining_ms))
+            .collect::<Vec<_>>(),
+        format_stats("Base", &runtime.stats.base),
+        format_stats("Class", &runtime.stats.from_class),
+        format_stats("Equipment", &runtime.stats.from_equipment),
+        format_rewards("Reward Base", &runtime.rewards.base),
+        format_rewards("Reward Class", &runtime.rewards.from_class),
+        format_rewards("Reward Equipment", &runtime.rewards.from_equipment),
+        format_stats("Persistent", &runtime.stats.from_persistent_modifiers),
+        format_stats("Timed", &runtime.stats.from_timed_modifiers),
+    );
+
+    println!(
+        "{}\n{}",
+        format_rewards(
+            "Reward Persistent",
+            &runtime.rewards.from_persistent_modifiers
+        ),
+        format_stats("Final", &runtime.stats.final_stats),
+    );
+
+    println!(
+        "{}",
+        format_rewards("Reward Final", &runtime.rewards.final_stats)
+    );
+}
+
+#[test]
 fn applies_persistent_modifiers_to_runtime_stats() {
     let mut snapshot = snapshot_base_only();
     snapshot.current_class_slug = "kael_royal_sentinel".to_string();
@@ -273,11 +383,11 @@ fn applies_persistent_modifiers_to_runtime_stats() {
     );
     assert_eq!(
         runtime.stats.from_persistent_modifiers.core.physical_atk,
-        12
+        71
     );
-    assert_eq!(runtime.stats.final_stats.core.mp, 380);
+    assert_eq!(runtime.stats.final_stats.core.mp, 500);
     assert_eq!(runtime.stats.final_stats.secondary.crit_chance, 15);
-    assert_eq!(runtime.stats.final_stats.core.physical_atk, 92);
+    assert_eq!(runtime.stats.final_stats.core.physical_atk, 549);
 }
 
 #[test]
@@ -306,7 +416,7 @@ fn applies_reward_modifiers_to_runtime_rewards() {
         ],
     });
 
-    assert_eq!(runtime.stats.final_stats.core.hp, 520);
+    assert_eq!(runtime.stats.final_stats.core.hp, 30_000);
     assert_eq!(
         runtime.rewards.from_persistent_modifiers.experience_gain,
         2500
@@ -340,7 +450,7 @@ fn applies_passive_skill_modifiers_from_catalog_automatically() {
             .crit_chance,
         8
     );
-    assert_eq!(runtime.stats.final_stats.core.mp, 380);
+    assert_eq!(runtime.stats.final_stats.core.mp, 500);
     assert_eq!(runtime.stats.final_stats.secondary.crit_chance, 8);
 }
 
@@ -398,11 +508,11 @@ fn applies_identified_item_instance_attributes_as_persistent_modifiers() {
     );
     assert_eq!(
         runtime.stats.from_persistent_modifiers.core.physical_atk,
-        12
+        52
     );
-    assert_eq!(runtime.stats.final_stats.core.physical_atk, 134);
+    assert_eq!(runtime.stats.final_stats.core.physical_atk, 572);
     assert_eq!(runtime.stats.final_stats.secondary.crit_chance, 10);
-    assert_eq!(runtime.stats.final_stats.secondary.crit_damage, 10);
+    assert_eq!(runtime.stats.final_stats.secondary.crit_damage, 160);
     assert_eq!(
         runtime.stats.final_stats.secondary.physical_attack_level,
         375
@@ -424,7 +534,7 @@ fn applies_refinement_to_equipped_item_instance_stats() {
     let runtime = build_runtime_character(&snapshot).expect("runtime build should succeed");
 
     assert_eq!(runtime.stats.from_equipment.core.physical_atk, 54);
-    assert_eq!(runtime.stats.final_stats.core.physical_atk, 134);
+    assert_eq!(runtime.stats.final_stats.core.physical_atk, 532);
     assert_eq!(runtime.stats.final_stats.secondary.crit_chance, 10);
 }
 
@@ -443,7 +553,7 @@ fn clamps_refinement_at_plus_seven() {
     let runtime = build_runtime_character(&snapshot).expect("runtime build should succeed");
 
     assert_eq!(runtime.stats.from_equipment.core.physical_atk, 71);
-    assert_eq!(runtime.stats.final_stats.core.physical_atk, 151);
+    assert_eq!(runtime.stats.final_stats.core.physical_atk, 549);
 }
 
 #[test]
@@ -477,8 +587,8 @@ fn applies_gems_inside_equipped_item_instance_calculation() {
     assert_eq!(runtime.stats.from_equipment.core.physical_atk, 42);
     assert_eq!(runtime.stats.from_equipment.core.hp, 60);
     assert_eq!(runtime.stats.from_equipment.secondary.crit_damage, 4);
-    assert_eq!(runtime.stats.final_stats.core.hp, 900);
-    assert_eq!(runtime.stats.final_stats.secondary.crit_damage, 9);
+    assert_eq!(runtime.stats.final_stats.core.hp, 30_380);
+    assert_eq!(runtime.stats.final_stats.secondary.crit_damage, 159);
 }
 
 #[test]
@@ -512,7 +622,7 @@ fn applies_rolled_gem_instance_effects_inside_equipped_item_instance_calculation
     let runtime = build_runtime_character(&snapshot).expect("runtime build should succeed");
 
     assert_eq!(runtime.stats.from_equipment.core.hp, 72);
-    assert_eq!(runtime.stats.final_stats.core.hp, 912);
+    assert_eq!(runtime.stats.final_stats.core.hp, 30_392);
 }
 
 #[test]
@@ -540,17 +650,17 @@ fn applies_and_expires_timed_modifiers() {
         ],
     });
 
-    assert_eq!(runtime.stats.from_timed_modifiers.core.physical_atk, 12);
-    assert_eq!(runtime.stats.from_timed_modifiers.core.magical_atk, 1);
-    assert_eq!(runtime.stats.final_stats.core.physical_atk, 92);
-    assert_eq!(runtime.stats.final_stats.core.magical_atk, 13);
+    assert_eq!(runtime.stats.from_timed_modifiers.core.physical_atk, 71);
+    assert_eq!(runtime.stats.from_timed_modifiers.core.magical_atk, 67);
+    assert_eq!(runtime.stats.final_stats.core.physical_atk, 549);
+    assert_eq!(runtime.stats.final_stats.core.magical_atk, 517);
 
     let changed = runtime.tick_timed_modifiers(15_000);
     assert!(changed);
     assert_eq!(runtime.stats.from_timed_modifiers.core.physical_atk, 0);
     assert_eq!(runtime.stats.from_timed_modifiers.core.magical_atk, 0);
-    assert_eq!(runtime.stats.final_stats.core.physical_atk, 80);
-    assert_eq!(runtime.stats.final_stats.core.magical_atk, 12);
+    assert_eq!(runtime.stats.final_stats.core.physical_atk, 478);
+    assert_eq!(runtime.stats.final_stats.core.magical_atk, 450);
 }
 
 #[test]
@@ -565,8 +675,8 @@ fn builds_advantage_skill_buff_from_catalog() {
 
     runtime.add_timed_modifier(modifier);
 
-    assert_eq!(runtime.stats.from_timed_modifiers.core.physical_atk, 12);
-    assert_eq!(runtime.stats.final_stats.core.physical_atk, 92);
+    assert_eq!(runtime.stats.from_timed_modifiers.core.physical_atk, 71);
+    assert_eq!(runtime.stats.final_stats.core.physical_atk, 549);
 }
 
 #[test]
@@ -581,8 +691,8 @@ fn uses_advantage_skill_and_spends_mp() {
     use_skill(&mut runtime, "sentinel_steel_pulse").expect("skill use should succeed");
 
     assert_eq!(runtime.resources.current_mp, initial_mp - 36);
-    assert_eq!(runtime.stats.from_timed_modifiers.core.physical_atk, 12);
-    assert_eq!(runtime.stats.final_stats.core.physical_atk, 92);
+    assert_eq!(runtime.stats.from_timed_modifiers.core.physical_atk, 71);
+    assert_eq!(runtime.stats.final_stats.core.physical_atk, 549);
     assert_eq!(
         runtime
             .skill_cooldowns_ms
@@ -621,7 +731,7 @@ fn expires_advantage_skill_buff_after_duration() {
 
     assert!(changed);
     assert_eq!(runtime.stats.from_timed_modifiers.core.physical_atk, 0);
-    assert_eq!(runtime.stats.final_stats.core.physical_atk, 80);
+    assert_eq!(runtime.stats.final_stats.core.physical_atk, 478);
 }
 
 #[test]

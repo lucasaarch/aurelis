@@ -28,13 +28,13 @@ pub enum StatKey {
     CcResistance,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 pub struct FixedStatLine {
     pub stat: StatKey,
     pub value: i32,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 pub struct CombatCoreStats {
     pub hp: i32,
     pub mp: i32,
@@ -46,7 +46,7 @@ pub struct CombatCoreStats {
     pub atk_spd: i32,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 pub struct CombatSecondaryStats {
     pub damage_reduction: i32,
     pub crit_chance: i32,
@@ -65,7 +65,7 @@ pub struct CombatSecondaryStats {
     pub cc_resistance: i32,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 pub struct CombatStats {
     pub core: CombatCoreStats,
     pub secondary: CombatSecondaryStats,

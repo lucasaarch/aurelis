@@ -44,7 +44,6 @@ pub fn calculate_equipped_item_instance(
         match split_instance_modifier(effect) {
             SplitModifier::FlatCombat(line) => {
                 flat_stats.add_line(line);
-                refinable_stats.add_line(line);
             }
             SplitModifier::Runtime(op) => modifiers.push(RuntimeModifier {
                 source: ModifierSource::Equipment {
@@ -58,7 +57,6 @@ pub fn calculate_equipped_item_instance(
 
     let gem_stats = calculate_gem_stats(snapshot, item_instance, item_data)?;
     flat_stats += gem_stats.flat_stats;
-    refinable_stats += gem_stats.flat_stats;
     modifiers.extend(gem_stats.modifiers);
 
     let equipment_slot = item_data
