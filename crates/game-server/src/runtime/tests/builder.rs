@@ -375,6 +375,11 @@ fn applies_identified_item_instance_attributes_as_persistent_modifiers() {
     let runtime = build_runtime_character(&snapshot).expect("runtime build should succeed");
 
     assert_eq!(runtime.stats.from_equipment.core.physical_atk, 42);
+    assert_eq!(runtime.stats.from_equipment.secondary.crit_damage, 5);
+    assert_eq!(
+        runtime.stats.from_equipment.secondary.physical_attack_level,
+        375
+    );
     assert_eq!(
         runtime
             .stats
@@ -389,15 +394,7 @@ fn applies_identified_item_instance_attributes_as_persistent_modifiers() {
             .from_persistent_modifiers
             .secondary
             .crit_damage,
-        10
-    );
-    assert_eq!(
-        runtime
-            .stats
-            .from_persistent_modifiers
-            .secondary
-            .physical_attack_level,
-        375
+        5
     );
     assert_eq!(
         runtime.stats.from_persistent_modifiers.core.physical_atk,
@@ -410,6 +407,112 @@ fn applies_identified_item_instance_attributes_as_persistent_modifiers() {
         runtime.stats.final_stats.secondary.physical_attack_level,
         375
     );
+}
+
+#[test]
+fn applies_refinement_to_equipped_item_instance_stats() {
+    let mut snapshot = snapshot_base_only();
+    snapshot.current_class_slug = "kael_royal_sentinel".to_string();
+    snapshot.equipment = vec![equipment("weapon", "11111111-1111-1111-1111-111111111111")];
+    let mut blade = item_instance(
+        "11111111-1111-1111-1111-111111111111",
+        "kael_training_blade",
+    );
+    blade.refinement = 3;
+    snapshot.item_instances = vec![blade];
+
+    let runtime = build_runtime_character(&snapshot).expect("runtime build should succeed");
+
+    assert_eq!(runtime.stats.from_equipment.core.physical_atk, 54);
+    assert_eq!(runtime.stats.final_stats.core.physical_atk, 134);
+    assert_eq!(runtime.stats.final_stats.secondary.crit_chance, 10);
+}
+
+#[test]
+fn clamps_refinement_at_plus_seven() {
+    let mut snapshot = snapshot_base_only();
+    snapshot.current_class_slug = "kael_royal_sentinel".to_string();
+    snapshot.equipment = vec![equipment("weapon", "11111111-1111-1111-1111-111111111111")];
+    let mut blade = item_instance(
+        "11111111-1111-1111-1111-111111111111",
+        "kael_training_blade",
+    );
+    blade.refinement = 99;
+    snapshot.item_instances = vec![blade];
+
+    let runtime = build_runtime_character(&snapshot).expect("runtime build should succeed");
+
+    assert_eq!(runtime.stats.from_equipment.core.physical_atk, 71);
+    assert_eq!(runtime.stats.final_stats.core.physical_atk, 151);
+}
+
+#[test]
+fn applies_gems_inside_equipped_item_instance_calculation() {
+    let mut snapshot = snapshot_base_only();
+    snapshot.current_class_slug = "kael_royal_sentinel".to_string();
+    snapshot.equipment = vec![equipment("weapon", "11111111-1111-1111-1111-111111111111")];
+
+    let mut blade = item_instance(
+        "11111111-1111-1111-1111-111111111111",
+        "kael_training_blade",
+    );
+    blade.gems = vec![
+        PersistedItemInstanceGem {
+            slot_index: 0,
+            gem_instance_id: Uuid::parse_str("66666666-6666-6666-6666-666666666666").unwrap(),
+        },
+        PersistedItemInstanceGem {
+            slot_index: 1,
+            gem_instance_id: Uuid::parse_str("77777777-7777-7777-7777-777777777777").unwrap(),
+        },
+    ];
+    snapshot.item_instances = vec![
+        blade,
+        item_instance("66666666-6666-6666-6666-666666666666", "vitality_gem"),
+        item_instance("77777777-7777-7777-7777-777777777777", "fury_gem"),
+    ];
+
+    let runtime = build_runtime_character(&snapshot).expect("runtime build should succeed");
+
+    assert_eq!(runtime.stats.from_equipment.core.physical_atk, 42);
+    assert_eq!(runtime.stats.from_equipment.core.hp, 60);
+    assert_eq!(runtime.stats.from_equipment.secondary.crit_damage, 4);
+    assert_eq!(runtime.stats.final_stats.core.hp, 900);
+    assert_eq!(runtime.stats.final_stats.secondary.crit_damage, 9);
+}
+
+#[test]
+fn applies_rolled_gem_instance_effects_inside_equipped_item_instance_calculation() {
+    let mut snapshot = snapshot_base_only();
+    snapshot.current_class_slug = "kael_royal_sentinel".to_string();
+    snapshot.equipment = vec![equipment("weapon", "11111111-1111-1111-1111-111111111111")];
+
+    let mut blade = item_instance(
+        "11111111-1111-1111-1111-111111111111",
+        "kael_training_blade",
+    );
+    blade.gems = vec![PersistedItemInstanceGem {
+        slot_index: 0,
+        gem_instance_id: Uuid::parse_str("88888888-8888-8888-8888-888888888888").unwrap(),
+    }];
+
+    let mut chaos_gem = item_instance("88888888-8888-8888-8888-888888888888", "chaos_gem");
+    chaos_gem.attributes_json = r#"{
+        "identified": true,
+        "roll_bias": "neutral",
+        "reroll_count": 0,
+        "additional_effects": [
+            { "id": "gem_roll_hp", "stat": "hp", "kind": "flat", "value": 72 }
+        ]
+    }"#
+    .to_string();
+
+    snapshot.item_instances = vec![blade, chaos_gem];
+
+    let runtime = build_runtime_character(&snapshot).expect("runtime build should succeed");
+
+    assert_eq!(runtime.stats.from_equipment.core.hp, 72);
+    assert_eq!(runtime.stats.final_stats.core.hp, 912);
 }
 
 #[test]
@@ -480,6 +583,13 @@ fn uses_advantage_skill_and_spends_mp() {
     assert_eq!(runtime.resources.current_mp, initial_mp - 36);
     assert_eq!(runtime.stats.from_timed_modifiers.core.physical_atk, 12);
     assert_eq!(runtime.stats.final_stats.core.physical_atk, 92);
+    assert_eq!(
+        runtime
+            .skill_cooldowns_ms
+            .get("sentinel_steel_pulse")
+            .copied(),
+        Some(12_000)
+    );
 }
 
 #[test]
@@ -512,6 +622,36 @@ fn expires_advantage_skill_buff_after_duration() {
     assert!(changed);
     assert_eq!(runtime.stats.from_timed_modifiers.core.physical_atk, 0);
     assert_eq!(runtime.stats.final_stats.core.physical_atk, 80);
+}
+
+#[test]
+fn rejects_skill_use_while_on_cooldown() {
+    let mut snapshot = snapshot_base_only();
+    snapshot.current_class_slug = "kael_royal_sentinel".to_string();
+    snapshot.level = 20;
+
+    let mut runtime = build_runtime_character(&snapshot).expect("runtime build should succeed");
+    use_skill(&mut runtime, "sentinel_steel_pulse").expect("first use should succeed");
+
+    let error =
+        use_skill(&mut runtime, "sentinel_steel_pulse").expect_err("second use should fail");
+
+    assert_eq!(error, "skill 'sentinel_steel_pulse' is on cooldown");
+}
+
+#[test]
+fn expires_skill_cooldown_after_duration() {
+    let mut snapshot = snapshot_base_only();
+    snapshot.current_class_slug = "kael_royal_sentinel".to_string();
+    snapshot.level = 20;
+
+    let mut runtime = build_runtime_character(&snapshot).expect("runtime build should succeed");
+    use_skill(&mut runtime, "sentinel_steel_pulse").expect("first use should succeed");
+
+    let changed = runtime.tick_skill_cooldowns(12_000);
+
+    assert!(changed);
+    assert!(!runtime.is_skill_on_cooldown("sentinel_steel_pulse"));
 }
 
 fn snapshot_base_only() -> PlayableCharacterSnapshot {

@@ -17,6 +17,10 @@ pub fn use_skill(runtime_character: &mut RuntimeCharacter, skill_slug: &str) -> 
     let skill = find_skill_by_slug(&runtime_character.base_character_slug, skill_slug)
         .ok_or_else(|| format!("unknown skill '{}'", skill_slug))?;
 
+    if runtime_character.is_skill_on_cooldown(skill_slug) {
+        return Err(format!("skill '{}' is on cooldown", skill_slug));
+    }
+
     match skill.owner {
         SkillOwner::BaseCharacter { .. } => {}
         SkillOwner::Class { class_slug } => {
@@ -36,6 +40,8 @@ pub fn use_skill(runtime_character: &mut RuntimeCharacter, skill_slug: &str) -> 
             let modifier =
                 build_timed_skill_modifier(&runtime_character.base_character_slug, skill_slug)?;
             runtime_character.add_timed_modifier(modifier);
+            runtime_character
+                .set_skill_cooldown(skill_slug, (skill.cooldown_secs * 1000.0).round() as u64);
             Ok(())
         }
         _ => Err(format!("skill '{}' is not usable yet", skill_slug)),

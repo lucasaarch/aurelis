@@ -190,12 +190,17 @@ pub fn process_client_messages(
 }
 
 pub fn tick_runtime_characters(
+    mut server: ResMut<RenetServer>,
     mut runtime_characters: ResMut<RuntimeCharacters>,
     config: Res<ServerRuntimeConfig>,
 ) {
     let elapsed_ms = ((1.0 / config.tick_rate) * 1000.0).round() as u64;
-    for runtime_character in runtime_characters.by_client_id.values_mut() {
-        runtime_character.tick_timed_modifiers(elapsed_ms);
+    for (client_id, runtime_character) in runtime_characters.by_client_id.iter_mut() {
+        let buffs_changed = runtime_character.tick_timed_modifiers(elapsed_ms);
+        let cooldowns_changed = runtime_character.tick_skill_cooldowns(elapsed_ms);
+        if buffs_changed || cooldowns_changed {
+            send_runtime_state(server.as_mut(), *client_id, runtime_character);
+        }
     }
 }
 
@@ -341,6 +346,7 @@ fn handle_select_character(
         runtime_character.stats.from_equipment,
         runtime_character.stats.final_stats
     );
+    send_runtime_state(server, client_id, &runtime_character);
 }
 
 fn handle_use_item(
@@ -405,6 +411,9 @@ fn handle_use_item(
             slot,
         },
     );
+    if let Some(runtime_character) = runtime_characters.by_client_id.get(&client_id) {
+        send_runtime_state(server, client_id, runtime_character);
+    }
 }
 
 fn handle_use_skill(
@@ -449,9 +458,27 @@ fn handle_use_skill(
     }
 
     send_server_message(server, client_id, &ServerMessage::SkillUsed { skill_slug });
+    send_runtime_state(server, client_id, runtime_character);
 }
 
 fn send_server_message(server: &mut RenetServer, client_id: u64, message: &ServerMessage) {
     let payload = bincode::serialize(message).expect("failed to encode server message");
     server.send_message(client_id, DefaultChannel::ReliableOrdered, payload);
+}
+
+fn send_runtime_state(
+    server: &mut RenetServer,
+    client_id: u64,
+    runtime_character: &crate::runtime::character::RuntimeCharacter,
+) {
+    send_server_message(
+        server,
+        client_id,
+        &ServerMessage::RuntimeStateUpdated {
+            current_hp: runtime_character.resources.current_hp,
+            current_mp: runtime_character.resources.current_mp,
+            active_buffs: runtime_character.active_buffs(),
+            skill_cooldowns: runtime_character.skill_cooldowns(),
+        },
+    );
 }

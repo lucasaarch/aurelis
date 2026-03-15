@@ -4,8 +4,8 @@ use crate::models::{
     inventory_type::InventoryType,
     item_data::{
         ArmorData, CatalogStatModifier, CatalogStatModifierDefinition,
-        EquipmentIdentificationRules, GemSlotConfig, ItemAcquisition, ItemData, ItemKind, Tradable,
-        TradeFee, WeaponData,
+        EquipmentIdentificationRules, GemData, GemEffectRollRules, GemSlotConfig, ItemAcquisition,
+        ItemData, ItemKind, Tradable, TradeFee, WeaponData,
     },
     item_instance_attributes::{EquipmentRollBias, StatModifierValueKind},
     item_rarity::ItemRarity,
@@ -363,6 +363,121 @@ pub static WARDENS_SEAL: ItemData = ItemData {
     },
 };
 
+const VITALITY_GEM_MODIFIERS: &[CatalogStatModifier] = &[CatalogStatModifier {
+    id: "vitality_gem_hp",
+    stat: ModifierStat::Combat(StatKey::Hp),
+    kind: StatModifierValueKind::Flat,
+    value: 60,
+}];
+
+const FURY_GEM_MODIFIERS: &[CatalogStatModifier] = &[CatalogStatModifier {
+    id: "fury_gem_crit_damage",
+    stat: ModifierStat::Combat(StatKey::CritDamage),
+    kind: StatModifierValueKind::Flat,
+    value: 4,
+}];
+
+const CHAOS_GEM_EFFECT_POOL: &[CatalogStatModifierDefinition] = &[
+    CatalogStatModifierDefinition {
+        id: "gem_roll_hp",
+        stat: ModifierStat::Combat(StatKey::Hp),
+        kind: StatModifierValueKind::Flat,
+        min_value: 45,
+        max_value: 90,
+        weight: 100,
+    },
+    CatalogStatModifierDefinition {
+        id: "gem_roll_crit_damage",
+        stat: ModifierStat::Combat(StatKey::CritDamage),
+        kind: StatModifierValueKind::Flat,
+        min_value: 2,
+        max_value: 6,
+        weight: 80,
+    },
+    CatalogStatModifierDefinition {
+        id: "gem_roll_crit_chance",
+        stat: ModifierStat::Combat(StatKey::CritChance),
+        kind: StatModifierValueKind::Flat,
+        min_value: 2,
+        max_value: 5,
+        weight: 80,
+    },
+    CatalogStatModifierDefinition {
+        id: "gem_roll_atk_spd",
+        stat: ModifierStat::Combat(StatKey::AtkSpd),
+        kind: StatModifierValueKind::Flat,
+        min_value: 3,
+        max_value: 7,
+        weight: 60,
+    },
+];
+
+pub static VITALITY_GEM: ItemData = ItemData {
+    slug: "vitality_gem",
+    name: "Vitality Gem",
+    description: "A polished gem that fortifies the life force of equipped gear.",
+    rarity: ItemRarity::Uncommon,
+    inventory_type: InventoryType::Material,
+    max_stack: 1,
+    kind: ItemKind::Gem(GemData {
+        fixed_modifiers: VITALITY_GEM_MODIFIERS,
+        effect_rolls: None,
+    }),
+    acquisition: ItemAcquisition {
+        droppable: true,
+        purchasable: None,
+        sellable: None,
+        tradable: Tradable::Yes {
+            fee: crate::models::item_data::TradeFee::Free,
+        },
+    },
+};
+
+pub static FURY_GEM: ItemData = ItemData {
+    slug: "fury_gem",
+    name: "Fury Gem",
+    description: "A sharpened gem that amplifies the critical force of equipped gear.",
+    rarity: ItemRarity::Uncommon,
+    inventory_type: InventoryType::Material,
+    max_stack: 1,
+    kind: ItemKind::Gem(GemData {
+        fixed_modifiers: FURY_GEM_MODIFIERS,
+        effect_rolls: None,
+    }),
+    acquisition: ItemAcquisition {
+        droppable: true,
+        purchasable: None,
+        sellable: None,
+        tradable: Tradable::Yes {
+            fee: crate::models::item_data::TradeFee::Free,
+        },
+    },
+};
+
+pub static CHAOS_GEM: ItemData = ItemData {
+    slug: "chaos_gem",
+    name: "Chaos Gem",
+    description: "An unstable gem that rolls a fresh combat bonus when prepared for socketing.",
+    rarity: ItemRarity::Rare,
+    inventory_type: InventoryType::Material,
+    max_stack: 1,
+    kind: ItemKind::Gem(GemData {
+        fixed_modifiers: &[],
+        effect_rolls: Some(GemEffectRollRules {
+            roll_count: 1,
+            effect_pool: CHAOS_GEM_EFFECT_POOL,
+        }),
+    }),
+    acquisition: ItemAcquisition {
+        droppable: true,
+        purchasable: None,
+        sellable: None,
+        tradable: Tradable::Yes {
+            fee: crate::models::item_data::TradeFee::Free,
+        },
+    },
+};
+
 pub static ITEMS: &[&ItemData] = &[
     &KAEL_TRAINING_BLADE,
     &KAEL_SQUIRE_CHESTPLATE,
@@ -374,4 +489,7 @@ pub static ITEMS: &[&ItemData] = &[
     &CORRUPTED_HOLY_WATER,
     &VOID_SHARD,
     &WARDENS_SEAL,
+    &VITALITY_GEM,
+    &FURY_GEM,
+    &CHAOS_GEM,
 ];

@@ -46,6 +46,7 @@ pub enum TradeFee {
 pub enum ItemKind {
     Weapon(WeaponData),
     Armor(ArmorData),
+    Gem(GemData),
     Material,
     Consumable(ConsumableData),
     Special(SpecialData),
@@ -77,6 +78,11 @@ pub struct ConsumableData {
     pub power_boost_percent: Option<f32>,
     pub move_speed_boost_percent: Option<f32>,
     pub attack_speed_boost_percent: Option<f32>,
+}
+
+pub struct GemData {
+    pub fixed_modifiers: &'static [CatalogStatModifier],
+    pub effect_rolls: Option<GemEffectRollRules>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -122,6 +128,12 @@ pub struct EquipmentIdentificationRules {
     pub additional_effect_pool: &'static [CatalogStatModifierDefinition],
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct GemEffectRollRules {
+    pub roll_count: i16,
+    pub effect_pool: &'static [CatalogStatModifierDefinition],
+}
+
 impl ItemKind {
     pub fn equipment_slot(&self) -> Option<EquipmentSlot> {
         match self {
@@ -151,6 +163,20 @@ impl ItemKind {
         match self {
             ItemKind::Weapon(data) => Some(data.fixed_special_effects),
             ItemKind::Armor(data) => Some(data.fixed_special_effects),
+            _ => None,
+        }
+    }
+
+    pub fn gem_modifiers(&self) -> Option<&'static [CatalogStatModifier]> {
+        match self {
+            ItemKind::Gem(data) => Some(data.fixed_modifiers),
+            _ => None,
+        }
+    }
+
+    pub fn gem_effect_rolls(&self) -> Option<GemEffectRollRules> {
+        match self {
+            ItemKind::Gem(data) => data.effect_rolls,
             _ => None,
         }
     }

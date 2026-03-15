@@ -30,6 +30,18 @@ pub fn protocol_id_from_version(version: &str) -> u64 {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ActiveBuffState {
+    pub effect_slug: String,
+    pub remaining_ms: u64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SkillCooldownState {
+    pub skill_slug: String,
+    pub remaining_ms: u64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum ClientMessage {
     Authenticate { token: String },
     SelectCharacter { character_id: Uuid },
@@ -39,12 +51,35 @@ pub enum ClientMessage {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum ServerMessage {
-    Authenticated { account_id: Uuid },
-    AuthenticationFailed { reason: String },
-    CharacterSelected { character_id: Uuid },
-    CharacterSelectionFailed { reason: String },
-    ItemUsed { inventory_type: String, slot: i16 },
-    ItemUseFailed { reason: String },
-    SkillUsed { skill_slug: String },
-    SkillUseFailed { reason: String },
+    Authenticated {
+        account_id: Uuid,
+    },
+    AuthenticationFailed {
+        reason: String,
+    },
+    CharacterSelected {
+        character_id: Uuid,
+    },
+    CharacterSelectionFailed {
+        reason: String,
+    },
+    ItemUsed {
+        inventory_type: String,
+        slot: i16,
+    },
+    ItemUseFailed {
+        reason: String,
+    },
+    SkillUsed {
+        skill_slug: String,
+    },
+    SkillUseFailed {
+        reason: String,
+    },
+    RuntimeStateUpdated {
+        current_hp: i32,
+        current_mp: i32,
+        active_buffs: Vec<ActiveBuffState>,
+        skill_cooldowns: Vec<SkillCooldownState>,
+    },
 }

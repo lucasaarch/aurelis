@@ -26,6 +26,7 @@ pub struct RuntimeCharacter {
     pub skill_unlocks: CharacterSkillUnlocks,
     pub available_skill_slugs: Vec<String>,
     pub loadout: RuntimeLoadout,
+    pub skill_cooldowns_ms: HashMap<String, u64>,
     pub persistent_modifiers: Vec<RuntimeModifier>,
     pub timed_modifiers: Vec<RuntimeModifier>,
     pub resources: RuntimeResources,
@@ -146,6 +147,16 @@ impl RuntimeCharacter {
         changed
     }
 
+    pub fn tick_skill_cooldowns(&mut self, elapsed_ms: u64) -> bool {
+        let initial_len = self.skill_cooldowns_ms.len();
+        self.skill_cooldowns_ms.retain(|_, remaining_ms| {
+            *remaining_ms = remaining_ms.saturating_sub(elapsed_ms);
+            *remaining_ms > 0
+        });
+
+        self.skill_cooldowns_ms.len() != initial_len
+    }
+
     pub fn spend_mp(&mut self, amount: i32) -> Result<(), String> {
         if amount < 0 {
             return Err("mp cost cannot be negative".to_string());
@@ -156,6 +167,49 @@ impl RuntimeCharacter {
 
         self.resources.current_mp -= amount;
         Ok(())
+    }
+
+    pub fn is_skill_on_cooldown(&self, skill_slug: &str) -> bool {
+        self.skill_cooldowns_ms
+            .get(skill_slug)
+            .copied()
+            .unwrap_or(0)
+            > 0
+    }
+
+    pub fn set_skill_cooldown(&mut self, skill_slug: &str, remaining_ms: u64) {
+        if remaining_ms > 0 {
+            self.skill_cooldowns_ms
+                .insert(skill_slug.to_string(), remaining_ms);
+        }
+    }
+
+    pub fn active_buffs(&self) -> Vec<shared::net::ActiveBuffState> {
+        self.timed_modifiers
+            .iter()
+            .filter_map(|modifier| match (&modifier.source, modifier.duration) {
+                (
+                    crate::runtime::modifier::ModifierSource::ActiveBuff { effect_slug },
+                    crate::runtime::modifier::ModifierDuration::Timed { remaining_ms },
+                ) => Some(shared::net::ActiveBuffState {
+                    effect_slug: effect_slug.clone(),
+                    remaining_ms,
+                }),
+                _ => None,
+            })
+            .collect()
+    }
+
+    pub fn skill_cooldowns(&self) -> Vec<shared::net::SkillCooldownState> {
+        self.skill_cooldowns_ms
+            .iter()
+            .map(
+                |(skill_slug, remaining_ms)| shared::net::SkillCooldownState {
+                    skill_slug: skill_slug.clone(),
+                    remaining_ms: *remaining_ms,
+                },
+            )
+            .collect()
     }
 }
 
