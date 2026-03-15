@@ -34,6 +34,7 @@ pub enum ClientMessage {
     Authenticate { token: String },
     SelectCharacter { character_id: Uuid },
     UseItem { inventory_type: String, slot: i16 },
+    UseSkill { skill_slug: String },
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -44,4 +45,6 @@ pub enum ServerMessage {
     CharacterSelectionFailed { reason: String },
     ItemUsed { inventory_type: String, slot: i16 },
     ItemUseFailed { reason: String },
+    SkillUsed { skill_slug: String },
+    SkillUseFailed { reason: String },
 }

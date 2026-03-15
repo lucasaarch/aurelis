@@ -22,6 +22,7 @@ impl Plugin for GameServerNetworkPlugin {
                     systems::initialize_session_on_player_connected,
                     systems::cleanup_session_on_player_disconnected,
                     systems::process_client_messages,
+                    systems::tick_runtime_characters,
                     systems::flush_player_connected_messages,
                     systems::flush_player_disconnected_messages,
                 ),

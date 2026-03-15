@@ -28,6 +28,7 @@ pub struct RuntimeCharacter {
     pub loadout: RuntimeLoadout,
     pub persistent_modifiers: Vec<RuntimeModifier>,
     pub timed_modifiers: Vec<RuntimeModifier>,
+    pub resources: RuntimeResources,
     pub stats: RuntimeStatBlock,
     pub rewards: RuntimeRewardBlock,
 }
@@ -66,6 +67,13 @@ pub struct RuntimeRewardBlock {
     pub from_persistent_modifiers: RewardStats,
     pub from_timed_modifiers: RewardStats,
     pub final_stats: RewardStats,
+}
+
+#[allow(dead_code)]
+#[derive(Clone)]
+pub struct RuntimeResources {
+    pub current_hp: i32,
+    pub current_mp: i32,
 }
 
 impl RuntimeCharacter {
@@ -107,6 +115,14 @@ impl RuntimeCharacter {
         self.rewards.from_persistent_modifiers = persistent_rewards;
         self.rewards.from_timed_modifiers = timed_rewards;
         self.rewards.final_stats = final_rewards;
+        self.resources.current_hp = self
+            .resources
+            .current_hp
+            .clamp(0, self.stats.final_stats.core.hp);
+        self.resources.current_mp = self
+            .resources
+            .current_mp
+            .clamp(0, self.stats.final_stats.core.mp);
     }
 
     pub fn add_persistent_modifier(&mut self, modifier: RuntimeModifier) {
@@ -128,6 +144,18 @@ impl RuntimeCharacter {
             self.recalculate_stats();
         }
         changed
+    }
+
+    pub fn spend_mp(&mut self, amount: i32) -> Result<(), String> {
+        if amount < 0 {
+            return Err("mp cost cannot be negative".to_string());
+        }
+        if self.resources.current_mp < amount {
+            return Err("not enough MP".to_string());
+        }
+
+        self.resources.current_mp -= amount;
+        Ok(())
     }
 }
 

@@ -150,6 +150,10 @@ pub fn build_runtime_character(
         loadout: RuntimeLoadout { equipped },
         persistent_modifiers,
         timed_modifiers: vec![],
+        resources: crate::runtime::character::RuntimeResources {
+            current_hp: base_stats.core.hp + class_stats.core.hp + equipment_stats.core.hp,
+            current_mp: base_stats.core.mp + class_stats.core.mp + equipment_stats.core.mp,
+        },
         stats: RuntimeStatBlock {
             base: base_stats,
             from_class: class_stats,

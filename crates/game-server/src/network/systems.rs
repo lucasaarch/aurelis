@@ -17,6 +17,7 @@ use crate::resources::runtime_characters::RuntimeCharacters;
 use crate::resources::server_boot_state::ServerBootState;
 use crate::runtime::builder::build_runtime_character;
 use crate::runtime::use_item::{UseItemRequest, use_item};
+use crate::runtime::use_skill::use_skill;
 use crate::server_config::ServerRuntimeConfig;
 use shared::net::{ClientMessage, ServerMessage};
 
@@ -174,8 +175,27 @@ pub fn process_client_messages(
                         slot,
                     );
                 }
+                ClientMessage::UseSkill { skill_slug } => {
+                    handle_use_skill(
+                        &mut server,
+                        &sessions,
+                        &mut runtime_characters,
+                        client_id,
+                        skill_slug,
+                    );
+                }
             }
         }
+    }
+}
+
+pub fn tick_runtime_characters(
+    mut runtime_characters: ResMut<RuntimeCharacters>,
+    config: Res<ServerRuntimeConfig>,
+) {
+    let elapsed_ms = ((1.0 / config.tick_rate) * 1000.0).round() as u64;
+    for runtime_character in runtime_characters.by_client_id.values_mut() {
+        runtime_character.tick_timed_modifiers(elapsed_ms);
     }
 }
 
@@ -385,6 +405,50 @@ fn handle_use_item(
             slot,
         },
     );
+}
+
+fn handle_use_skill(
+    server: &mut RenetServer,
+    sessions: &ClientSessions,
+    runtime_characters: &mut RuntimeCharacters,
+    client_id: u64,
+    skill_slug: String,
+) {
+    let Some(session) = sessions.by_client_id.get(&client_id) else {
+        return;
+    };
+
+    match session.state {
+        SessionState::CharacterSelected { .. } => {}
+        SessionState::Authenticated { .. } | SessionState::ConnectedUnauthenticated => {
+            send_server_message(
+                server,
+                client_id,
+                &ServerMessage::SkillUseFailed {
+                    reason: "client has no selected character".to_string(),
+                },
+            );
+            return;
+        }
+    }
+
+    let Some(runtime_character) = runtime_characters.by_client_id.get_mut(&client_id) else {
+        send_server_message(
+            server,
+            client_id,
+            &ServerMessage::SkillUseFailed {
+                reason: "runtime character is not loaded".to_string(),
+            },
+        );
+        return;
+    };
+
+    if let Err(reason) = use_skill(runtime_character, &skill_slug) {
+        send_server_message(server, client_id, &ServerMessage::SkillUseFailed { reason });
+        return;
+    }
+
+    send_server_message(server, client_id, &ServerMessage::SkillUsed { skill_slug });
 }
 
 fn send_server_message(server: &mut RenetServer, client_id: u64, message: &ServerMessage) {

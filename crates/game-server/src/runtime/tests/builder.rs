@@ -8,6 +8,7 @@ use crate::{
     runtime::builder::build_runtime_character,
     runtime::modifier::{ModifierDuration, ModifierSource, RuntimeModifier, StatModifierOp},
     runtime::skill_effects::build_timed_skill_modifier,
+    runtime::use_skill::use_skill,
 };
 use shared::models::{
     character_data::{CharacterSkillUnlocks, CombatAffinity},
@@ -463,6 +464,54 @@ fn builds_advantage_skill_buff_from_catalog() {
 
     assert_eq!(runtime.stats.from_timed_modifiers.core.physical_atk, 12);
     assert_eq!(runtime.stats.final_stats.core.physical_atk, 92);
+}
+
+#[test]
+fn uses_advantage_skill_and_spends_mp() {
+    let mut snapshot = snapshot_base_only();
+    snapshot.current_class_slug = "kael_royal_sentinel".to_string();
+    snapshot.level = 20;
+
+    let mut runtime = build_runtime_character(&snapshot).expect("runtime build should succeed");
+    let initial_mp = runtime.resources.current_mp;
+
+    use_skill(&mut runtime, "sentinel_steel_pulse").expect("skill use should succeed");
+
+    assert_eq!(runtime.resources.current_mp, initial_mp - 36);
+    assert_eq!(runtime.stats.from_timed_modifiers.core.physical_atk, 12);
+    assert_eq!(runtime.stats.final_stats.core.physical_atk, 92);
+}
+
+#[test]
+fn rejects_skill_use_when_mp_is_insufficient() {
+    let mut snapshot = snapshot_base_only();
+    snapshot.current_class_slug = "kael_royal_sentinel".to_string();
+    snapshot.level = 20;
+
+    let mut runtime = build_runtime_character(&snapshot).expect("runtime build should succeed");
+    runtime.resources.current_mp = 10;
+
+    let error = use_skill(&mut runtime, "sentinel_steel_pulse")
+        .expect_err("skill use should fail without enough MP");
+
+    assert_eq!(error, "not enough MP");
+    assert_eq!(runtime.stats.from_timed_modifiers.core.physical_atk, 0);
+}
+
+#[test]
+fn expires_advantage_skill_buff_after_duration() {
+    let mut snapshot = snapshot_base_only();
+    snapshot.current_class_slug = "kael_royal_sentinel".to_string();
+    snapshot.level = 20;
+
+    let mut runtime = build_runtime_character(&snapshot).expect("runtime build should succeed");
+    use_skill(&mut runtime, "sentinel_steel_pulse").expect("skill use should succeed");
+
+    let changed = runtime.tick_timed_modifiers(15_000);
+
+    assert!(changed);
+    assert_eq!(runtime.stats.from_timed_modifiers.core.physical_atk, 0);
+    assert_eq!(runtime.stats.final_stats.core.physical_atk, 80);
 }
 
 fn snapshot_base_only() -> PlayableCharacterSnapshot {
