@@ -160,7 +160,7 @@ diesel::table! {
         id -> Uuid,
         item_id -> Uuid,
         refinement -> Int2,
-        gem_slots -> Int2,
+        bonus_gem_slots -> Int2,
         attributes -> Jsonb,
         owner_character_id -> Nullable<Uuid>,
         owner_account_id -> Nullable<Uuid>,
@@ -266,6 +266,8 @@ diesel::table! {
         credits -> Int8,
         created_at -> Timestamptz,
         updated_at -> Timestamptz,
+        beginner_skill_unlocked -> Bool,
+        intermediate_skill_unlocked -> Bool,
     }
 }
 

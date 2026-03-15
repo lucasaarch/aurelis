@@ -4,12 +4,14 @@ use crate::repositories::account::PgAccountRepository;
 use crate::repositories::character::PgCharacterRepository;
 use crate::repositories::inventory::PgInventoryRepository;
 use crate::repositories::item::PgItemRepository;
+use crate::repositories::item_instance::PgItemInstanceRepository;
 use crate::services::account::AccountService;
 use crate::services::auth::AuthService;
 use crate::services::character::CharacterService;
 use crate::services::hash::HashService;
 use crate::services::inventory::InventoryService;
 use crate::services::item::ItemService;
+use crate::services::item_instance::ItemInstanceService;
 use crate::services::jwt::JwtService;
 
 #[derive(Clone)]
@@ -20,6 +22,7 @@ pub struct AppState {
     pub character_service: CharacterService,
     pub jwt_service: JwtService,
     pub item_service: ItemService,
+    pub item_instance_service: ItemInstanceService,
     pub inventory_service: InventoryService,
 }
 
@@ -28,6 +31,7 @@ impl AppState {
         let account_repository = PgAccountRepository::new(db.clone());
         let character_repository = PgCharacterRepository::new(db.clone());
         let item_repository = PgItemRepository::new(db.clone());
+        let item_instance_repository = PgItemInstanceRepository::new(db.clone());
         let inventory_repository = PgInventoryRepository::new(db.clone());
 
         let hash_service = HashService::default();
@@ -58,6 +62,8 @@ impl AppState {
             character_service.clone(),
             inventory_service.clone(),
         );
+        let item_instance_service =
+            ItemInstanceService::new(item_instance_repository, character_service.clone());
 
         Self {
             config: config.clone(),
@@ -66,6 +72,7 @@ impl AppState {
             character_service,
             jwt_service,
             item_service,
+            item_instance_service,
             inventory_service,
         }
     }

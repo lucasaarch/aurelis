@@ -1,4 +1,7 @@
-use crate::models::skill_data::{SkillData, SkillKind, SkillOwner};
+use crate::models::{
+    character_data::CombatAffinity,
+    skill_data::{SkillCost, SkillData, SkillKind, SkillOwner, SkillUnlockRequirement},
+};
 
 pub static KAEL_SLASH: SkillData = SkillData {
     slug: "kael_slash",
@@ -7,9 +10,10 @@ pub static KAEL_SLASH: SkillData = SkillData {
     owner: SkillOwner::BaseCharacter {
         character_slug: "kael",
     },
-    kind: SkillKind::SpecialActive,
-    level_req: 1,
-    mp_cost: 12,
+    kind: SkillKind::Active,
+    scaling_affinity: CombatAffinity::Physical,
+    unlock_requirement: SkillUnlockRequirement::Level { required_level: 1 },
+    cost: SkillCost::Mp(12),
     cooldown_secs: 4.0,
     cast_time_secs: 0.2,
     range: 1.8,
@@ -22,9 +26,10 @@ pub static KAEL_GUARDING_STRIKE: SkillData = SkillData {
     owner: SkillOwner::BaseCharacter {
         character_slug: "kael",
     },
-    kind: SkillKind::SpecialActive,
-    level_req: 1,
-    mp_cost: 18,
+    kind: SkillKind::Advantage,
+    scaling_affinity: CombatAffinity::Physical,
+    unlock_requirement: SkillUnlockRequirement::Level { required_level: 5 },
+    cost: SkillCost::Mp(18),
     cooldown_secs: 8.0,
     cast_time_secs: 0.4,
     range: 2.2,

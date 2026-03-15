@@ -4,6 +4,7 @@ package internal_game;
 
 service InternalGameService {
   rpc LoadPlayableCharacter(LoadPlayableCharacterRequest) returns (LoadPlayableCharacterResponse);
+  rpc PersistItemInstanceState(PersistItemInstanceStateRequest) returns (PersistItemInstanceStateResponse);
 }
 
 message LoadPlayableCharacterRequest {
@@ -20,9 +21,11 @@ message LoadPlayableCharacterResponse {
   string account_id = 6;
   int64 experience = 7;
   int64 credits = 8;
-  repeated PersistedInventorySnapshot inventories = 9;
-  repeated PersistedEquipmentSnapshot equipment = 10;
-  repeated PersistedItemInstanceSnapshot item_instances = 11;
+  bool beginner_skill_unlocked = 9;
+  bool intermediate_skill_unlocked = 10;
+  repeated PersistedInventorySnapshot inventories = 11;
+  repeated PersistedEquipmentSnapshot equipment = 12;
+  repeated PersistedItemInstanceSnapshot item_instances = 13;
 }
 
 message PersistedInventorySnapshot {
@@ -54,7 +57,7 @@ message PersistedItemInstanceSnapshot {
   string item_slug = 3;
   string inventory_type = 4;
   int32 refinement = 5;
-  int32 gem_slots = 6;
+  int32 bonus_gem_slots = 6;
   string attributes_json = 7;
   bool in_shared_storage = 8;
   bool in_trade = 9;
@@ -65,3 +68,13 @@ message PersistedItemInstanceGemSnapshot {
   int32 slot_index = 1;
   string gem_instance_id = 2;
 }
+
+message PersistItemInstanceStateRequest {
+  string account_id = 1;
+  string character_id = 2;
+  string item_instance_id = 3;
+  int32 bonus_gem_slots = 4;
+  string attributes_json = 5;
+}
+
+message PersistItemInstanceStateResponse {}

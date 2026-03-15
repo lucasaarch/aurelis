@@ -8,6 +8,7 @@ pub mod character;
 pub mod dungeon;
 pub mod inventory;
 pub mod item;
+pub mod item_instance;
 pub mod mob;
 pub mod quest;
 

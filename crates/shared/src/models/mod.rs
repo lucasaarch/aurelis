@@ -1,11 +1,14 @@
-pub mod combat_stats;
 pub mod character_data;
+pub mod combat_stats;
 pub mod dungeon_data;
 pub mod equipment_slot;
 pub mod inventory_type;
 pub mod item_data;
+pub mod item_instance_attributes;
 pub mod item_rarity;
 pub mod mob_data;
 pub mod mob_type;
 pub mod quest_data;
+pub mod reward_stats;
 pub mod skill_data;
+pub mod stat_modifier;

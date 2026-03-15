@@ -1,4 +1,4 @@
-use crate::models::character_data::{CharacterData, CharacterProgress};
+use crate::models::character_data::{CharacterData, CharacterSkillUnlocks, CombatAffinity};
 
 pub struct SkillData {
     pub slug: &'static str,
@@ -6,8 +6,9 @@ pub struct SkillData {
     pub description: &'static str,
     pub owner: SkillOwner,
     pub kind: SkillKind,
-    pub level_req: i16,
-    pub mp_cost: i32,
+    pub scaling_affinity: CombatAffinity,
+    pub unlock_requirement: SkillUnlockRequirement,
+    pub cost: SkillCost,
     pub cooldown_secs: f32,
     pub cast_time_secs: f32,
     pub range: f32,
@@ -19,31 +20,88 @@ pub enum SkillOwner {
 }
 
 pub enum SkillKind {
-    Passive,
     Active,
-    SpecialActive,
+    Advantage,
+    SpecialActive(SpecialActiveTier),
+    Passive,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SpecialActiveTier {
+    Signature,
+    Awakened,
+    Ascendant,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum CharacterSkillUnlockTier {
+    Beginner,
+    Intermediate,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SkillUnlockRequirement {
+    Level {
+        required_level: i16,
+    },
+    CharacterBookTier {
+        required_level: i16,
+        tier: CharacterSkillUnlockTier,
+    },
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SkillCost {
+    None,
+    Mp(i32),
 }
 
 impl SkillData {
+    pub fn required_level(&self) -> i16 {
+        match self.unlock_requirement {
+            SkillUnlockRequirement::Level { required_level } => required_level,
+            SkillUnlockRequirement::CharacterBookTier { required_level, .. } => required_level,
+        }
+    }
+
+    pub fn mp_cost(&self) -> i32 {
+        match self.cost {
+            SkillCost::None => 0,
+            SkillCost::Mp(value) => value,
+        }
+    }
+
     pub fn is_unlocked_for(
         &self,
         character: &CharacterData,
-        progress: &CharacterProgress,
+        current_class_slug: &str,
         character_level: i16,
+        skill_unlocks: &CharacterSkillUnlocks,
     ) -> bool {
-        if character_level < self.level_req {
+        if character_level < self.required_level() {
             return false;
         }
 
-        let Some(unlocked_slugs) = character.unlocked_class_slugs(progress) else {
+        let Some(unlocked_slugs) =
+            character.unlocked_class_slugs_for_current_class(current_class_slug)
+        else {
             return false;
         };
 
-        match self.owner {
+        let owner_unlocked = match self.owner {
             SkillOwner::BaseCharacter { character_slug } => {
                 unlocked_slugs.contains(&character_slug)
             }
             SkillOwner::Class { class_slug } => unlocked_slugs.contains(&class_slug),
+        };
+
+        if !owner_unlocked {
+            return false;
+        }
+
+        match self.unlock_requirement {
+            SkillUnlockRequirement::Level { .. } => true,
+            SkillUnlockRequirement::CharacterBookTier { tier, .. } => skill_unlocks.has_tier(tier),
         }
     }
 }

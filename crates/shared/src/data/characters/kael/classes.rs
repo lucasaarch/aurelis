@@ -1,10 +1,11 @@
-use crate::models::character_data::{CharacterBaseStats, ClassData, ClassType};
+use crate::models::character_data::{CharacterBaseStats, ClassData, ClassType, CombatAffinity};
 
 pub static KAEL_ROYAL_SENTINEL: ClassData = ClassData {
     slug: "kael_royal_sentinel",
     name: "Royal Sentinel",
     description: "Kael embraces his duty as a protector of Aurelis, hardening his body and sharpening his blade. His strikes become more deliberate, trading speed for devastating precision.",
     class_type: ClassType::First,
+    affinity: CombatAffinity::Physical,
     stat_bonuses: CharacterBaseStats {
         hp: 320,
         mp: 100,
@@ -22,6 +23,7 @@ pub static KAEL_SOVEREIGN_BLADE: ClassData = ClassData {
     name: "Sovereign Blade",
     description: "Having witnessed the full weight of Aurelis's fall, Kael transcends his role as a soldier. He becomes a force of reckoning — his blade now carries the condensed will of a kingdom.",
     class_type: ClassType::Second,
+    affinity: CombatAffinity::Physical,
     stat_bonuses: CharacterBaseStats {
         hp: 680,
         mp: 220,

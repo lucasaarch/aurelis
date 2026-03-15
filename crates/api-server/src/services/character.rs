@@ -14,6 +14,7 @@ use crate::repositories::character::{
     CreateCharacterParams, PgCharacterRepository, PlayableCharacterRow,
 };
 use crate::repositories::item::PgItemRepository;
+use shared::models::character_data::CharacterSkillUnlocks;
 
 pub struct CreateCharacterInput {
     pub name: String,
@@ -29,6 +30,7 @@ pub struct PlayableCharacterSnapshot {
     pub level: i16,
     pub experience: i64,
     pub credits: i64,
+    pub skill_unlocks: CharacterSkillUnlocks,
     pub inventories: Vec<PersistedInventorySnapshot>,
     pub equipment: Vec<PersistedEquipmentSnapshot>,
     pub item_instances: Vec<PersistedItemInstanceSnapshot>,
@@ -63,7 +65,7 @@ pub struct PersistedItemInstanceSnapshot {
     pub item_slug: String,
     pub inventory_type: String,
     pub refinement: i16,
-    pub gem_slots: i16,
+    pub bonus_gem_slots: i16,
     pub attributes_json: String,
     pub in_shared_storage: bool,
     pub in_trade: bool,
@@ -202,17 +204,26 @@ impl CharacterService {
             ));
         }
 
-        let inventories = self.character_repository.list_inventories(character_id).await?;
+        let inventories = self
+            .character_repository
+            .list_inventories(character_id)
+            .await?;
         let inventory_by_id = inventories
             .iter()
             .map(|inventory| (inventory.id, inventory.clone()))
             .collect::<HashMap<_, _>>();
-        let inventory_ids = inventories.iter().map(|inventory| inventory.id).collect::<Vec<_>>();
+        let inventory_ids = inventories
+            .iter()
+            .map(|inventory| inventory.id)
+            .collect::<Vec<_>>();
         let inventory_items = self
             .character_repository
             .list_inventory_items(inventory_ids)
             .await?;
-        let equipment = self.character_repository.list_equipment(character_id).await?;
+        let equipment = self
+            .character_repository
+            .list_equipment(character_id)
+            .await?;
 
         let mut referenced_item_instance_ids = inventory_items
             .iter()
@@ -254,7 +265,11 @@ impl CharacterService {
             .iter()
             .filter_map(|item| item.item_id)
             .collect::<Vec<_>>();
-        item_ids.extend(item_instances.iter().map(|item_instance| item_instance.item_id));
+        item_ids.extend(
+            item_instances
+                .iter()
+                .map(|item_instance| item_instance.item_id),
+        );
         item_ids.sort_unstable();
         item_ids.dedup();
 
@@ -289,13 +304,13 @@ fn map_playable_character_snapshot(
     item_instance_gems: Vec<ItemInstanceGemModel>,
     item_by_id: HashMap<Uuid, ItemModel>,
 ) -> PlayableCharacterSnapshot {
-    let mut item_instance_gems_by_item_instance_id =
-        item_instance_gems
-            .into_iter()
-            .fold(HashMap::<Uuid, Vec<ItemInstanceGemModel>>::new(), |mut acc, gem| {
-                acc.entry(gem.item_instance_id).or_default().push(gem);
-                acc
-            });
+    let mut item_instance_gems_by_item_instance_id = item_instance_gems.into_iter().fold(
+        HashMap::<Uuid, Vec<ItemInstanceGemModel>>::new(),
+        |mut acc, gem| {
+            acc.entry(gem.item_instance_id).or_default().push(gem);
+            acc
+        },
+    );
 
     let item_instances = item_instances
         .into_iter()
@@ -319,7 +334,7 @@ fn map_playable_character_snapshot(
                 item_slug: item.slug.clone(),
                 inventory_type: item.inventory_type.to_string(),
                 refinement: item_instance.refinement,
-                gem_slots: item_instance.gem_slots,
+                bonus_gem_slots: item_instance.bonus_gem_slots,
                 attributes_json: json_value_to_string(item_instance.attributes),
                 in_shared_storage: item_instance.in_shared_storage,
                 in_trade: item_instance.in_trade,
@@ -328,27 +343,28 @@ fn map_playable_character_snapshot(
         })
         .collect::<Vec<_>>();
 
-    let mut inventory_items_by_inventory_id =
-        inventory_items
-            .into_iter()
-            .fold(HashMap::<Uuid, Vec<PersistedInventoryItemSnapshot>>::new(), |mut acc, item| {
-                let item_slug = item
-                    .item_id
-                    .and_then(|item_id| item_by_id.get(&item_id).map(|item| item.slug.clone()))
-                    .or_else(|| {
-                        item.item_instance_id.and_then(|item_instance_id| {
-                            item_instances
-                                .iter()
-                                .find(|instance| instance.id == item_instance_id)
-                                .map(|instance| instance.item_slug.clone())
-                        })
-                    });
+    let mut inventory_items_by_inventory_id = inventory_items.into_iter().fold(
+        HashMap::<Uuid, Vec<PersistedInventoryItemSnapshot>>::new(),
+        |mut acc, item| {
+            let item_slug = item
+                .item_id
+                .and_then(|item_id| item_by_id.get(&item_id).map(|item| item.slug.clone()))
+                .or_else(|| {
+                    item.item_instance_id.and_then(|item_instance_id| {
+                        item_instances
+                            .iter()
+                            .find(|instance| instance.id == item_instance_id)
+                            .map(|instance| instance.item_slug.clone())
+                    })
+                });
 
-                let inventory = inventory_by_id
-                    .get(&item.inventory_id)
-                    .expect("missing inventory for inventory item");
+            let inventory = inventory_by_id
+                .get(&item.inventory_id)
+                .expect("missing inventory for inventory item");
 
-                acc.entry(item.inventory_id).or_default().push(PersistedInventoryItemSnapshot {
+            acc.entry(item.inventory_id)
+                .or_default()
+                .push(PersistedInventoryItemSnapshot {
                     id: item.id,
                     inventory_id: item.inventory_id,
                     inventory_type: inventory.inventory_type.to_string(),
@@ -358,8 +374,9 @@ fn map_playable_character_snapshot(
                     item_id: item.item_id,
                     item_slug,
                 });
-                acc
-            });
+            acc
+        },
+    );
 
     let inventories = inventories
         .into_iter()
@@ -390,6 +407,10 @@ fn map_playable_character_snapshot(
         level: row.level,
         experience: row.experience,
         credits: row.credits,
+        skill_unlocks: CharacterSkillUnlocks {
+            beginner: row.beginner_skill_unlocked,
+            intermediate: row.intermediate_skill_unlocked,
+        },
         inventories,
         equipment,
         item_instances,

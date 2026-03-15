@@ -29,7 +29,15 @@ pub struct ClassData {
     pub name: &'static str,
     pub description: &'static str,
     pub class_type: ClassType,
+    pub affinity: CombatAffinity,
     pub stat_bonuses: CharacterBaseStats,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum CombatAffinity {
+    Neutral,
+    Physical,
+    Magical,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -57,6 +65,21 @@ pub enum CharacterClassTier {
 pub struct CharacterProgress {
     pub selected_path_index: usize,
     pub tier: CharacterClassTier,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub struct CharacterSkillUnlocks {
+    pub beginner: bool,
+    pub intermediate: bool,
+}
+
+impl CharacterSkillUnlocks {
+    pub fn has_tier(&self, tier: crate::models::skill_data::CharacterSkillUnlockTier) -> bool {
+        match tier {
+            crate::models::skill_data::CharacterSkillUnlockTier::Beginner => self.beginner,
+            crate::models::skill_data::CharacterSkillUnlockTier::Intermediate => self.intermediate,
+        }
+    }
 }
 
 impl CharacterData {
@@ -100,6 +123,36 @@ impl CharacterData {
             .flat_map(|path| path.steps.iter().copied())
             .find(|class| class.slug == class_slug)
     }
+
+    pub fn unlocked_class_slugs_for_current_class<'a>(
+        &'a self,
+        current_class_slug: &str,
+    ) -> Option<Vec<&'a str>> {
+        if self.slug == current_class_slug {
+            return Some(vec![self.slug]);
+        }
+
+        for path in self.evolution_lines {
+            let mut slugs = vec![self.slug];
+            for class in path.steps {
+                slugs.push(class.slug);
+                if class.slug == current_class_slug {
+                    return Some(slugs);
+                }
+            }
+        }
+
+        None
+    }
+
+    pub fn affinity_for_current_class(&self, current_class_slug: &str) -> Option<CombatAffinity> {
+        if self.slug == current_class_slug {
+            return Some(CombatAffinity::Neutral);
+        }
+
+        self.find_class_by_slug(current_class_slug)
+            .map(|class| class.affinity)
+    }
 }
 
 impl From<CharacterBaseStats> for CombatStats {
@@ -120,6 +173,8 @@ impl From<CharacterBaseStats> for CombatStats {
                 crit_chance: 0,
                 crit_damage: 0,
                 accuracy: 0,
+                physical_attack_level: 0,
+                magical_attack_level: 0,
                 physical_pen: 0,
                 magical_pen: 0,
                 hp_regen: 0,

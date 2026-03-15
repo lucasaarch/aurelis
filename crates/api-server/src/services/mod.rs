@@ -4,4 +4,5 @@ pub mod character;
 pub mod hash;
 pub mod inventory;
 pub mod item;
+pub mod item_instance;
 pub mod jwt;

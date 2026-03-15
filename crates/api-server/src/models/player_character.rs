@@ -1,9 +1,10 @@
 use chrono::{NaiveDateTime, Utc};
-use diesel::prelude::{Insertable, Queryable};
+use diesel::prelude::{Insertable, Queryable, Selectable};
 use uuid::Uuid;
 
-#[derive(Queryable, Insertable)]
+#[derive(Queryable, Insertable, Selectable)]
 #[diesel(table_name = crate::db::schema::player_characters)]
+#[diesel(check_for_backend(diesel::pg::Pg))]
 pub struct PlayerCharacterModel {
     pub id: Uuid,
     pub account_id: Uuid,
@@ -13,6 +14,8 @@ pub struct PlayerCharacterModel {
     pub level: i16,
     pub experience: i64,
     pub credits: i64,
+    pub beginner_skill_unlocked: bool,
+    pub intermediate_skill_unlocked: bool,
     pub created_at: NaiveDateTime,
     pub updated_at: NaiveDateTime,
 }
@@ -34,6 +37,8 @@ impl PlayerCharacterModel {
             level: 1,
             experience: 0,
             credits: 0,
+            beginner_skill_unlocked: false,
+            intermediate_skill_unlocked: false,
             created_at: now,
             updated_at: now,
         }

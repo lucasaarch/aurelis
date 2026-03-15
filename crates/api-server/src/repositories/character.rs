@@ -14,8 +14,9 @@ use crate::{
     models::{
         character::CharacterModel, character_class_path::CharacterClassPathModel,
         character_class_path_class::CharacterClassPathClassModel, equipment::EquipmentModel,
-        inventory::InventoryModel, inventory_item::InventoryItemModel, item_instance::ItemInstanceModel,
-        item_instance_gem::ItemInstanceGemModel, player_character::PlayerCharacterModel,
+        inventory::InventoryModel, inventory_item::InventoryItemModel,
+        item_instance::ItemInstanceModel, item_instance_gem::ItemInstanceGemModel,
+        player_character::PlayerCharacterModel,
     },
     repositories::{Repository, RepositoryError},
 };
@@ -42,6 +43,8 @@ pub struct PlayableCharacterRow {
     pub level: i16,
     pub experience: i64,
     pub credits: i64,
+    pub beginner_skill_unlocked: bool,
+    pub intermediate_skill_unlocked: bool,
 }
 
 pub struct CreateCharacterParams {
@@ -89,6 +92,7 @@ impl PgCharacterRepository {
 
             player_characters
                 .filter(id.eq(player_character_id))
+                .select(PlayerCharacterModel::as_select())
                 .first::<PlayerCharacterModel>(conn)
                 .map_err(Into::into)
         })
@@ -104,6 +108,7 @@ impl PgCharacterRepository {
 
             player_characters
                 .filter(name.eq(player_character_name))
+                .select(PlayerCharacterModel::as_select())
                 .first::<PlayerCharacterModel>(conn)
                 .map_err(Into::into)
         })
@@ -132,6 +137,7 @@ impl PgCharacterRepository {
 
                 let created = insert_into(player_characters::table)
                     .values(&model)
+                    .returning(PlayerCharacterModel::as_returning())
                     .get_result::<PlayerCharacterModel>(conn)?;
 
                 let inventories: Vec<InventoryModel> = [
@@ -175,6 +181,7 @@ impl PgCharacterRepository {
             player_characters
                 .filter(account_id.eq(acc_id))
                 .order(created_at.asc())
+                .select(PlayerCharacterModel::as_select())
                 .load::<PlayerCharacterModel>(conn)
                 .map_err(Into::into)
         })
@@ -338,8 +345,21 @@ impl PgCharacterRepository {
                     player_characters::level,
                     player_characters::experience,
                     player_characters::credits,
+                    player_characters::beginner_skill_unlocked,
+                    player_characters::intermediate_skill_unlocked,
                 ))
-                .first::<(Uuid, Uuid, String, String, String, i16, i64, i64)>(conn)?;
+                .first::<(
+                    Uuid,
+                    Uuid,
+                    String,
+                    String,
+                    String,
+                    i16,
+                    i64,
+                    i64,
+                    bool,
+                    bool,
+                )>(conn)?;
 
             Ok(PlayableCharacterRow {
                 character_id: row.0,
@@ -350,6 +370,8 @@ impl PgCharacterRepository {
                 level: row.5,
                 experience: row.6,
                 credits: row.7,
+                beginner_skill_unlocked: row.8,
+                intermediate_skill_unlocked: row.9,
             })
         })
         .await
@@ -380,7 +402,10 @@ impl PgCharacterRepository {
         self.run_blocking(move |conn| {
             inventory_items::table
                 .filter(inventory_items::inventory_id.eq_any(inventory_ids))
-                .order((inventory_items::inventory_id.asc(), inventory_items::slot_index.asc()))
+                .order((
+                    inventory_items::inventory_id.asc(),
+                    inventory_items::slot_index.asc(),
+                ))
                 .load::<InventoryItemModel>(conn)
                 .map_err(Into::into)
         })

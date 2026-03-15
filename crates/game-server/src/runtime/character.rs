@@ -1,9 +1,15 @@
 use std::collections::HashMap;
 
 use shared::models::{
-    combat_stats::CombatStats, equipment_slot::EquipmentSlot, item_data::ItemData,
+    character_data::{CharacterSkillUnlocks, CombatAffinity},
+    combat_stats::CombatStats,
+    equipment_slot::EquipmentSlot,
+    item_data::ItemData,
+    reward_stats::RewardStats,
 };
 use uuid::Uuid;
+
+use crate::runtime::modifier::RuntimeModifier;
 
 #[allow(dead_code)]
 #[derive(Clone)]
@@ -13,11 +19,17 @@ pub struct RuntimeCharacter {
     pub name: String,
     pub base_character_slug: String,
     pub current_class_slug: String,
+    pub combat_affinity: CombatAffinity,
     pub level: i16,
     pub experience: i64,
     pub credits: i64,
+    pub skill_unlocks: CharacterSkillUnlocks,
+    pub available_skill_slugs: Vec<String>,
     pub loadout: RuntimeLoadout,
+    pub persistent_modifiers: Vec<RuntimeModifier>,
+    pub timed_modifiers: Vec<RuntimeModifier>,
     pub stats: RuntimeStatBlock,
+    pub rewards: RuntimeRewardBlock,
 }
 
 #[allow(dead_code)]
@@ -40,5 +52,155 @@ pub struct RuntimeStatBlock {
     pub base: CombatStats,
     pub from_class: CombatStats,
     pub from_equipment: CombatStats,
+    pub from_persistent_modifiers: CombatStats,
+    pub from_timed_modifiers: CombatStats,
     pub final_stats: CombatStats,
+}
+
+#[allow(dead_code)]
+#[derive(Clone)]
+pub struct RuntimeRewardBlock {
+    pub base: RewardStats,
+    pub from_class: RewardStats,
+    pub from_equipment: RewardStats,
+    pub from_persistent_modifiers: RewardStats,
+    pub from_timed_modifiers: RewardStats,
+    pub final_stats: RewardStats,
+}
+
+impl RuntimeCharacter {
+    pub fn recalculate_stats(&mut self) {
+        let (persistent_stats, persistent_rewards) = aggregate_modifier_stats(
+            &self.stats.base,
+            &self.stats.from_class,
+            &self.stats.from_equipment,
+            &self.rewards.base,
+            &self.rewards.from_class,
+            &self.rewards.from_equipment,
+            &self.persistent_modifiers,
+        );
+        let (timed_stats, timed_rewards) = aggregate_modifier_stats(
+            &self.stats.base,
+            &self.stats.from_class,
+            &self.stats.from_equipment,
+            &self.rewards.base,
+            &self.rewards.from_class,
+            &self.rewards.from_equipment,
+            &self.timed_modifiers,
+        );
+
+        let mut final_stats = self.stats.base;
+        final_stats += self.stats.from_class;
+        final_stats += self.stats.from_equipment;
+        final_stats += persistent_stats;
+        final_stats += timed_stats;
+
+        let mut final_rewards = self.rewards.base;
+        final_rewards += self.rewards.from_class;
+        final_rewards += self.rewards.from_equipment;
+        final_rewards += persistent_rewards;
+        final_rewards += timed_rewards;
+
+        self.stats.from_persistent_modifiers = persistent_stats;
+        self.stats.from_timed_modifiers = timed_stats;
+        self.stats.final_stats = final_stats;
+        self.rewards.from_persistent_modifiers = persistent_rewards;
+        self.rewards.from_timed_modifiers = timed_rewards;
+        self.rewards.final_stats = final_rewards;
+    }
+
+    pub fn add_persistent_modifier(&mut self, modifier: RuntimeModifier) {
+        self.persistent_modifiers.push(modifier);
+        self.recalculate_stats();
+    }
+
+    pub fn add_timed_modifier(&mut self, modifier: RuntimeModifier) {
+        self.timed_modifiers.push(modifier);
+        self.recalculate_stats();
+    }
+
+    pub fn tick_timed_modifiers(&mut self, elapsed_ms: u64) -> bool {
+        let initial_len = self.timed_modifiers.len();
+        self.timed_modifiers
+            .retain_mut(|modifier| !modifier.tick(elapsed_ms));
+        let changed = self.timed_modifiers.len() != initial_len;
+        if changed {
+            self.recalculate_stats();
+        }
+        changed
+    }
+}
+
+fn aggregate_modifier_stats(
+    base_stats: &CombatStats,
+    class_stats: &CombatStats,
+    equipment_stats: &CombatStats,
+    base_rewards: &RewardStats,
+    class_rewards: &RewardStats,
+    equipment_rewards: &RewardStats,
+    modifiers: &[RuntimeModifier],
+) -> (CombatStats, RewardStats) {
+    let mut running_stats = *base_stats;
+    running_stats += *class_stats;
+    running_stats += *equipment_stats;
+    let mut running_rewards = *base_rewards;
+    running_rewards += *class_rewards;
+    running_rewards += *equipment_rewards;
+
+    let mut contributed = CombatStats::ZERO;
+    let mut contributed_rewards = RewardStats::ZERO;
+
+    for modifier in modifiers {
+        let before_stats = running_stats;
+        let before_rewards = running_rewards;
+        modifier.apply_to_stats(&mut running_stats, &mut running_rewards);
+        contributed += difference(&before_stats, &running_stats);
+        contributed_rewards += reward_difference(&before_rewards, &running_rewards);
+    }
+
+    (contributed, contributed_rewards)
+}
+
+fn difference(before: &CombatStats, after: &CombatStats) -> CombatStats {
+    CombatStats {
+        core: shared::models::combat_stats::CombatCoreStats {
+            hp: after.core.hp - before.core.hp,
+            mp: after.core.mp - before.core.mp,
+            physical_atk: after.core.physical_atk - before.core.physical_atk,
+            magical_atk: after.core.magical_atk - before.core.magical_atk,
+            physical_def: after.core.physical_def - before.core.physical_def,
+            magical_def: after.core.magical_def - before.core.magical_def,
+            move_spd: after.core.move_spd - before.core.move_spd,
+            atk_spd: after.core.atk_spd - before.core.atk_spd,
+        },
+        secondary: shared::models::combat_stats::CombatSecondaryStats {
+            damage_reduction: after.secondary.damage_reduction - before.secondary.damage_reduction,
+            crit_chance: after.secondary.crit_chance - before.secondary.crit_chance,
+            crit_damage: after.secondary.crit_damage - before.secondary.crit_damage,
+            accuracy: after.secondary.accuracy - before.secondary.accuracy,
+            physical_attack_level: after.secondary.physical_attack_level
+                - before.secondary.physical_attack_level,
+            magical_attack_level: after.secondary.magical_attack_level
+                - before.secondary.magical_attack_level,
+            physical_pen: after.secondary.physical_pen - before.secondary.physical_pen,
+            magical_pen: after.secondary.magical_pen - before.secondary.magical_pen,
+            hp_regen: after.secondary.hp_regen - before.secondary.hp_regen,
+            mp_regen: after.secondary.mp_regen - before.secondary.mp_regen,
+            life_steal: after.secondary.life_steal - before.secondary.life_steal,
+            cooldown_reduction: after.secondary.cooldown_reduction
+                - before.secondary.cooldown_reduction,
+            crit_resistance: after.secondary.crit_resistance - before.secondary.crit_resistance,
+            knockback_resistance: after.secondary.knockback_resistance
+                - before.secondary.knockback_resistance,
+            cc_resistance: after.secondary.cc_resistance - before.secondary.cc_resistance,
+        },
+    }
+}
+
+fn reward_difference(before: &RewardStats, after: &RewardStats) -> RewardStats {
+    RewardStats {
+        experience_gain: after.experience_gain - before.experience_gain,
+        drop_rate: after.drop_rate - before.drop_rate,
+        credit_gain: after.credit_gain - before.credit_gain,
+    }
 }

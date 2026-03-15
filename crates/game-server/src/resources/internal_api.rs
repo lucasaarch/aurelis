@@ -6,10 +6,11 @@ use tonic::transport::Endpoint;
 use tonic::{Request, Status};
 use uuid::Uuid;
 
+use shared::models::character_data::CharacterSkillUnlocks;
 use shared::proto::internal_game::{
-    LoadPlayableCharacterRequest, LoadPlayableCharacterResponse, PersistedEquipmentSnapshot,
-    PersistedInventoryItemSnapshot, PersistedInventorySnapshot, PersistedItemInstanceGemSnapshot,
-    PersistedItemInstanceSnapshot,
+    LoadPlayableCharacterRequest, LoadPlayableCharacterResponse, PersistItemInstanceStateRequest,
+    PersistedEquipmentSnapshot, PersistedInventoryItemSnapshot, PersistedInventorySnapshot,
+    PersistedItemInstanceGemSnapshot, PersistedItemInstanceSnapshot,
     internal_game_service_client::InternalGameServiceClient,
 };
 
@@ -31,6 +32,7 @@ pub struct PlayableCharacterSnapshot {
     pub level: i16,
     pub experience: i64,
     pub credits: i64,
+    pub skill_unlocks: CharacterSkillUnlocks,
     pub inventories: Vec<PersistedInventory>,
     pub equipment: Vec<PersistedEquipment>,
     pub item_instances: Vec<PersistedItemInstance>,
@@ -73,7 +75,7 @@ pub struct PersistedItemInstance {
     pub item_slug: String,
     pub inventory_type: String,
     pub refinement: i16,
-    pub gem_slots: i16,
+    pub bonus_gem_slots: i16,
     pub attributes_json: String,
     pub in_shared_storage: bool,
     pub in_trade: bool,
@@ -120,6 +122,36 @@ impl InternalApi {
             map_snapshot(response)
         })
     }
+
+    pub fn persist_item_instance_state(
+        &self,
+        account_id: Uuid,
+        character_id: Uuid,
+        item_instance_id: Uuid,
+        bonus_gem_slots: i16,
+        attributes_json: String,
+    ) -> Result<(), String> {
+        self.runtime.block_on(async {
+            let endpoint =
+                Endpoint::from_shared(self.grpc_addr.clone()).map_err(|err| err.to_string())?;
+            let channel = endpoint.connect().await.map_err(|err| err.to_string())?;
+            let interceptor = InternalServerAuthInterceptor::new(self.bearer_token.clone());
+            let mut client = InternalGameServiceClient::with_interceptor(channel, interceptor);
+
+            client
+                .persist_item_instance_state(Request::new(PersistItemInstanceStateRequest {
+                    account_id: account_id.to_string(),
+                    character_id: character_id.to_string(),
+                    item_instance_id: item_instance_id.to_string(),
+                    bonus_gem_slots: i32::from(bonus_gem_slots),
+                    attributes_json,
+                }))
+                .await
+                .map_err(|err| err.to_string())?;
+
+            Ok(())
+        })
+    }
 }
 
 fn map_snapshot(
@@ -134,6 +166,10 @@ fn map_snapshot(
         level: response.level as i16,
         experience: response.experience,
         credits: response.credits,
+        skill_unlocks: CharacterSkillUnlocks {
+            beginner: response.beginner_skill_unlocked,
+            intermediate: response.intermediate_skill_unlocked,
+        },
         inventories: response
             .inventories
             .into_iter()
@@ -165,7 +201,9 @@ fn map_inventory(response: PersistedInventorySnapshot) -> Result<PersistedInvent
     })
 }
 
-fn map_inventory_item(response: PersistedInventoryItemSnapshot) -> Result<PersistedInventoryItem, String> {
+fn map_inventory_item(
+    response: PersistedInventoryItemSnapshot,
+) -> Result<PersistedInventoryItem, String> {
     Ok(PersistedInventoryItem {
         id: Uuid::parse_str(&response.id).map_err(|err| err.to_string())?,
         inventory_id: Uuid::parse_str(&response.inventory_id).map_err(|err| err.to_string())?,
@@ -201,7 +239,7 @@ fn map_item_instance(
         item_slug: response.item_slug,
         inventory_type: response.inventory_type,
         refinement: response.refinement as i16,
-        gem_slots: response.gem_slots as i16,
+        bonus_gem_slots: response.bonus_gem_slots as i16,
         attributes_json: response.attributes_json,
         in_shared_storage: response.in_shared_storage,
         in_trade: response.in_trade,
@@ -218,7 +256,8 @@ fn map_item_instance_gem(
 ) -> Result<PersistedItemInstanceGem, String> {
     Ok(PersistedItemInstanceGem {
         slot_index: response.slot_index as i16,
-        gem_instance_id: Uuid::parse_str(&response.gem_instance_id).map_err(|err| err.to_string())?,
+        gem_instance_id: Uuid::parse_str(&response.gem_instance_id)
+            .map_err(|err| err.to_string())?,
     })
 }
 

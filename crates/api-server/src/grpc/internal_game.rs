@@ -1,22 +1,29 @@
 use tonic::{Request, Response, Status};
 use uuid::Uuid;
 
-use crate::services::character::CharacterService;
+use crate::services::{character::CharacterService, item_instance::ItemInstanceService};
 
 use shared::proto::internal_game::{
-    LoadPlayableCharacterRequest, LoadPlayableCharacterResponse, PersistedEquipmentSnapshot,
-    PersistedInventoryItemSnapshot, PersistedInventorySnapshot, PersistedItemInstanceGemSnapshot,
-    PersistedItemInstanceSnapshot,
+    LoadPlayableCharacterRequest, LoadPlayableCharacterResponse, PersistItemInstanceStateRequest,
+    PersistItemInstanceStateResponse, PersistedEquipmentSnapshot, PersistedInventoryItemSnapshot,
+    PersistedInventorySnapshot, PersistedItemInstanceGemSnapshot, PersistedItemInstanceSnapshot,
     internal_game_service_server::InternalGameService,
 };
 
 pub struct GrpcInternalGameServiceImpl {
     character_service: CharacterService,
+    item_instance_service: ItemInstanceService,
 }
 
 impl GrpcInternalGameServiceImpl {
-    pub fn new(character_service: CharacterService) -> Self {
-        Self { character_service }
+    pub fn new(
+        character_service: CharacterService,
+        item_instance_service: ItemInstanceService,
+    ) -> Self {
+        Self {
+            character_service,
+            item_instance_service,
+        }
     }
 }
 
@@ -46,6 +53,8 @@ impl InternalGameService for GrpcInternalGameServiceImpl {
             account_id: result.account_id.to_string(),
             experience: result.experience,
             credits: result.credits,
+            beginner_skill_unlocked: result.skill_unlocks.beginner,
+            intermediate_skill_unlocked: result.skill_unlocks.intermediate,
             inventories: result
                 .inventories
                 .into_iter()
@@ -86,7 +95,7 @@ impl InternalGameService for GrpcInternalGameServiceImpl {
                     item_slug: item_instance.item_slug,
                     inventory_type: item_instance.inventory_type,
                     refinement: item_instance.refinement as i32,
-                    gem_slots: item_instance.gem_slots as i32,
+                    bonus_gem_slots: item_instance.bonus_gem_slots as i32,
                     attributes_json: item_instance.attributes_json,
                     in_shared_storage: item_instance.in_shared_storage,
                     in_trade: item_instance.in_trade,
@@ -101,5 +110,30 @@ impl InternalGameService for GrpcInternalGameServiceImpl {
                 })
                 .collect(),
         }))
+    }
+
+    async fn persist_item_instance_state(
+        &self,
+        request: Request<PersistItemInstanceStateRequest>,
+    ) -> Result<Response<PersistItemInstanceStateResponse>, Status> {
+        let req = request.into_inner();
+        let account_id = Uuid::parse_str(&req.account_id)
+            .map_err(|_| Status::invalid_argument("invalid account_id"))?;
+        let character_id = Uuid::parse_str(&req.character_id)
+            .map_err(|_| Status::invalid_argument("invalid character_id"))?;
+        let item_instance_id = Uuid::parse_str(&req.item_instance_id)
+            .map_err(|_| Status::invalid_argument("invalid item_instance_id"))?;
+
+        self.item_instance_service
+            .persist_state(
+                account_id,
+                character_id,
+                item_instance_id,
+                req.bonus_gem_slots as i16,
+                req.attributes_json,
+            )
+            .await?;
+
+        Ok(Response::new(PersistItemInstanceStateResponse {}))
     }
 }

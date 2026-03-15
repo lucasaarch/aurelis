@@ -1,6 +1,10 @@
 use crate::models::{
-    combat_stats::FixedStatLine, equipment_slot::EquipmentSlot, inventory_type::InventoryType,
+    combat_stats::FixedStatLine,
+    equipment_slot::EquipmentSlot,
+    inventory_type::InventoryType,
+    item_instance_attributes::{EquipmentRollBias, StatModifierValueKind},
     item_rarity::ItemRarity,
+    stat_modifier::ModifierStat,
 };
 
 pub struct ItemData {
@@ -51,14 +55,18 @@ pub struct WeaponData {
     pub class: Option<&'static str>,
     pub level_req: i16,
     pub fixed_stats: &'static [FixedStatLine],
+    pub fixed_special_effects: &'static [CatalogStatModifier],
     pub gem_slots: GemSlotConfig,
+    pub identification: Option<EquipmentIdentificationRules>,
 }
 
 pub struct ArmorData {
     pub slot: EquipmentSlot,
     pub level_req: i16,
     pub fixed_stats: &'static [FixedStatLine],
+    pub fixed_special_effects: &'static [CatalogStatModifier],
     pub gem_slots: GemSlotConfig,
+    pub identification: Option<EquipmentIdentificationRules>,
 }
 
 pub struct ConsumableData {
@@ -87,6 +95,32 @@ impl GemSlotConfig {
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct CatalogStatModifier {
+    pub id: &'static str,
+    pub stat: ModifierStat,
+    pub kind: StatModifierValueKind,
+    pub value: i32,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct CatalogStatModifierDefinition {
+    pub id: &'static str,
+    pub stat: ModifierStat,
+    pub kind: StatModifierValueKind,
+    pub min_value: i32,
+    pub max_value: i32,
+    pub weight: u16,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct EquipmentIdentificationRules {
+    pub starts_unidentified: bool,
+    pub bias: EquipmentRollBias,
+    pub additional_effect_count: i16,
+    pub additional_effect_pool: &'static [CatalogStatModifierDefinition],
+}
+
 impl ItemKind {
     pub fn equipment_slot(&self) -> Option<EquipmentSlot> {
         match self {
@@ -108,6 +142,22 @@ impl ItemKind {
         match self {
             ItemKind::Weapon(data) => Some(data.gem_slots),
             ItemKind::Armor(data) => Some(data.gem_slots),
+            _ => None,
+        }
+    }
+
+    pub fn fixed_special_effects(&self) -> Option<&'static [CatalogStatModifier]> {
+        match self {
+            ItemKind::Weapon(data) => Some(data.fixed_special_effects),
+            ItemKind::Armor(data) => Some(data.fixed_special_effects),
+            _ => None,
+        }
+    }
+
+    pub fn identification(&self) -> Option<EquipmentIdentificationRules> {
+        match self {
+            ItemKind::Weapon(data) => data.identification,
+            ItemKind::Armor(data) => data.identification,
             _ => None,
         }
     }

@@ -1,4 +1,7 @@
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+use serde::{Deserialize, Serialize};
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub enum StatKey {
     Hp,
     Mp,
@@ -12,6 +15,8 @@ pub enum StatKey {
     CritChance,
     CritDamage,
     Accuracy,
+    PhysicalAttackLevel,
+    MagicalAttackLevel,
     PhysicalPen,
     MagicalPen,
     HpRegen,
@@ -47,6 +52,8 @@ pub struct CombatSecondaryStats {
     pub crit_chance: i32,
     pub crit_damage: i32,
     pub accuracy: i32,
+    pub physical_attack_level: i32,
+    pub magical_attack_level: i32,
     pub physical_pen: i32,
     pub magical_pen: i32,
     pub hp_regen: i32,
@@ -81,6 +88,8 @@ impl CombatStats {
             crit_chance: 0,
             crit_damage: 0,
             accuracy: 0,
+            physical_attack_level: 0,
+            magical_attack_level: 0,
             physical_pen: 0,
             magical_pen: 0,
             hp_regen: 0,
@@ -107,6 +116,8 @@ impl CombatStats {
             StatKey::CritChance => self.secondary.crit_chance += line.value,
             StatKey::CritDamage => self.secondary.crit_damage += line.value,
             StatKey::Accuracy => self.secondary.accuracy += line.value,
+            StatKey::PhysicalAttackLevel => self.secondary.physical_attack_level += line.value,
+            StatKey::MagicalAttackLevel => self.secondary.magical_attack_level += line.value,
             StatKey::PhysicalPen => self.secondary.physical_pen += line.value,
             StatKey::MagicalPen => self.secondary.magical_pen += line.value,
             StatKey::HpRegen => self.secondary.hp_regen += line.value,
@@ -124,6 +135,44 @@ impl CombatStats {
             self.add_line(*line);
         }
     }
+
+    pub fn get_stat(&self, stat: StatKey) -> i32 {
+        match stat {
+            StatKey::Hp => self.core.hp,
+            StatKey::Mp => self.core.mp,
+            StatKey::PhysicalAtk => self.core.physical_atk,
+            StatKey::MagicalAtk => self.core.magical_atk,
+            StatKey::PhysicalDef => self.core.physical_def,
+            StatKey::MagicalDef => self.core.magical_def,
+            StatKey::MoveSpd => self.core.move_spd,
+            StatKey::AtkSpd => self.core.atk_spd,
+            StatKey::DamageReduction => self.secondary.damage_reduction,
+            StatKey::CritChance => self.secondary.crit_chance,
+            StatKey::CritDamage => self.secondary.crit_damage,
+            StatKey::Accuracy => self.secondary.accuracy,
+            StatKey::PhysicalAttackLevel => self.secondary.physical_attack_level,
+            StatKey::MagicalAttackLevel => self.secondary.magical_attack_level,
+            StatKey::PhysicalPen => self.secondary.physical_pen,
+            StatKey::MagicalPen => self.secondary.magical_pen,
+            StatKey::HpRegen => self.secondary.hp_regen,
+            StatKey::MpRegen => self.secondary.mp_regen,
+            StatKey::LifeSteal => self.secondary.life_steal,
+            StatKey::CooldownReduction => self.secondary.cooldown_reduction,
+            StatKey::CritResistance => self.secondary.crit_resistance,
+            StatKey::KnockbackResistance => self.secondary.knockback_resistance,
+            StatKey::CcResistance => self.secondary.cc_resistance,
+        }
+    }
+
+    pub fn add_to_stat(&mut self, stat: StatKey, value: i32) {
+        self.add_line(FixedStatLine { stat, value });
+    }
+
+    pub fn add_percent_to_stat(&mut self, stat: StatKey, value_bp: i32) {
+        let base_value = self.get_stat(stat);
+        let delta = (base_value * value_bp) / 10_000;
+        self.add_to_stat(stat, delta);
+    }
 }
 
 impl std::ops::AddAssign for CombatStats {
@@ -140,6 +189,8 @@ impl std::ops::AddAssign for CombatStats {
         self.secondary.crit_chance += rhs.secondary.crit_chance;
         self.secondary.crit_damage += rhs.secondary.crit_damage;
         self.secondary.accuracy += rhs.secondary.accuracy;
+        self.secondary.physical_attack_level += rhs.secondary.physical_attack_level;
+        self.secondary.magical_attack_level += rhs.secondary.magical_attack_level;
         self.secondary.physical_pen += rhs.secondary.physical_pen;
         self.secondary.magical_pen += rhs.secondary.magical_pen;
         self.secondary.hp_regen += rhs.secondary.hp_regen;

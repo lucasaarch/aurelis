@@ -25,8 +25,10 @@ pub async fn serve_grpc(state: Arc<AppState>, addr: &str) {
         state.inventory_service.clone(),
         state.character_service.clone(),
     );
-    let grpc_internal_game_service =
-        GrpcInternalGameServiceImpl::new(state.character_service.clone());
+    let grpc_internal_game_service = GrpcInternalGameServiceImpl::new(
+        state.character_service.clone(),
+        state.item_instance_service.clone(),
+    );
     let internal_server_token = state.config.server.internal_server_token.clone();
 
     Server::builder()

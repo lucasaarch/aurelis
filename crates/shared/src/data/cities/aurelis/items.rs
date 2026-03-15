@@ -2,8 +2,14 @@ use crate::models::{
     combat_stats::{FixedStatLine, StatKey},
     equipment_slot::EquipmentSlot,
     inventory_type::InventoryType,
-    item_data::{GemSlotConfig, ItemAcquisition, ItemData, ItemKind, Tradable, TradeFee, WeaponData, ArmorData},
+    item_data::{
+        ArmorData, CatalogStatModifier, CatalogStatModifierDefinition,
+        EquipmentIdentificationRules, GemSlotConfig, ItemAcquisition, ItemData, ItemKind, Tradable,
+        TradeFee, WeaponData,
+    },
+    item_instance_attributes::{EquipmentRollBias, StatModifierValueKind},
     item_rarity::ItemRarity,
+    stat_modifier::ModifierStat,
 };
 
 const KAEL_TRAINING_BLADE_STATS: &[FixedStatLine] = &[FixedStatLine {
@@ -71,6 +77,51 @@ const KAEL_SQUIRE_BOOTS_STATS: &[FixedStatLine] = &[
     },
 ];
 
+const KAEL_TRAINING_BLADE_FIXED_EFFECTS: &[CatalogStatModifier] = &[
+    CatalogStatModifier {
+        id: "weapon_base_crit_chance",
+        stat: ModifierStat::Combat(StatKey::CritChance),
+        kind: StatModifierValueKind::Flat,
+        value: 10,
+    },
+    CatalogStatModifier {
+        id: "weapon_base_crit_damage",
+        stat: ModifierStat::Combat(StatKey::CritDamage),
+        kind: StatModifierValueKind::Flat,
+        value: 5,
+    },
+];
+
+const KAEL_TRAINING_BLADE_ADDITIONAL_EFFECT_POOL: &[CatalogStatModifierDefinition] = &[
+    CatalogStatModifierDefinition {
+        id: "add_physical_attack_level",
+        stat: ModifierStat::Combat(StatKey::PhysicalAttackLevel),
+        kind: StatModifierValueKind::Flat,
+        min_value: 300,
+        max_value: 450,
+        weight: 100,
+    },
+    CatalogStatModifierDefinition {
+        id: "add_magical_attack_level",
+        stat: ModifierStat::Combat(StatKey::MagicalAttackLevel),
+        kind: StatModifierValueKind::Flat,
+        min_value: 300,
+        max_value: 450,
+        weight: 100,
+    },
+    CatalogStatModifierDefinition {
+        id: "add_crit_damage",
+        stat: ModifierStat::Combat(StatKey::CritDamage),
+        kind: StatModifierValueKind::Flat,
+        min_value: 3,
+        max_value: 8,
+        weight: 75,
+    },
+];
+
+const NO_FIXED_SPECIAL_EFFECTS: &[CatalogStatModifier] = &[];
+const NO_ADDITIONAL_EFFECT_POOL: &[CatalogStatModifierDefinition] = &[];
+
 pub static KAEL_TRAINING_BLADE: ItemData = ItemData {
     slug: "kael_training_blade",
     name: "Kael Training Blade",
@@ -83,13 +134,22 @@ pub static KAEL_TRAINING_BLADE: ItemData = ItemData {
         class: Some("kael"),
         level_req: 1,
         fixed_stats: KAEL_TRAINING_BLADE_STATS,
+        fixed_special_effects: KAEL_TRAINING_BLADE_FIXED_EFFECTS,
         gem_slots: GemSlotConfig::FOUR_BASE_PLUS_ONE_BONUS,
+        identification: Some(EquipmentIdentificationRules {
+            starts_unidentified: true,
+            bias: EquipmentRollBias::Physical,
+            additional_effect_count: 3,
+            additional_effect_pool: KAEL_TRAINING_BLADE_ADDITIONAL_EFFECT_POOL,
+        }),
     }),
     acquisition: ItemAcquisition {
         droppable: true,
         purchasable: None,
         sellable: None,
-        tradable: Tradable::Yes { fee: TradeFee::Free },
+        tradable: Tradable::Yes {
+            fee: TradeFee::Free,
+        },
     },
 };
 
@@ -104,13 +164,22 @@ pub static KAEL_SQUIRE_CHESTPLATE: ItemData = ItemData {
         slot: EquipmentSlot::Chest,
         level_req: 1,
         fixed_stats: KAEL_SQUIRE_CHESTPLATE_STATS,
+        fixed_special_effects: NO_FIXED_SPECIAL_EFFECTS,
         gem_slots: GemSlotConfig::FOUR_BASE_PLUS_ONE_BONUS,
+        identification: Some(EquipmentIdentificationRules {
+            starts_unidentified: true,
+            bias: EquipmentRollBias::Neutral,
+            additional_effect_count: 0,
+            additional_effect_pool: NO_ADDITIONAL_EFFECT_POOL,
+        }),
     }),
     acquisition: ItemAcquisition {
         droppable: true,
         purchasable: None,
         sellable: None,
-        tradable: Tradable::Yes { fee: TradeFee::Free },
+        tradable: Tradable::Yes {
+            fee: TradeFee::Free,
+        },
     },
 };
 
@@ -125,13 +194,22 @@ pub static KAEL_SQUIRE_LEGGUARDS: ItemData = ItemData {
         slot: EquipmentSlot::Legs,
         level_req: 1,
         fixed_stats: KAEL_SQUIRE_LEGGUARDS_STATS,
+        fixed_special_effects: NO_FIXED_SPECIAL_EFFECTS,
         gem_slots: GemSlotConfig::FOUR_BASE_PLUS_ONE_BONUS,
+        identification: Some(EquipmentIdentificationRules {
+            starts_unidentified: true,
+            bias: EquipmentRollBias::Neutral,
+            additional_effect_count: 0,
+            additional_effect_pool: NO_ADDITIONAL_EFFECT_POOL,
+        }),
     }),
     acquisition: ItemAcquisition {
         droppable: true,
         purchasable: None,
         sellable: None,
-        tradable: Tradable::Yes { fee: TradeFee::Free },
+        tradable: Tradable::Yes {
+            fee: TradeFee::Free,
+        },
     },
 };
 
@@ -146,13 +224,22 @@ pub static KAEL_SQUIRE_GAUNTLETS: ItemData = ItemData {
         slot: EquipmentSlot::Gloves,
         level_req: 1,
         fixed_stats: KAEL_SQUIRE_GAUNTLETS_STATS,
+        fixed_special_effects: NO_FIXED_SPECIAL_EFFECTS,
         gem_slots: GemSlotConfig::FOUR_BASE_PLUS_ONE_BONUS,
+        identification: Some(EquipmentIdentificationRules {
+            starts_unidentified: true,
+            bias: EquipmentRollBias::Neutral,
+            additional_effect_count: 0,
+            additional_effect_pool: NO_ADDITIONAL_EFFECT_POOL,
+        }),
     }),
     acquisition: ItemAcquisition {
         droppable: true,
         purchasable: None,
         sellable: None,
-        tradable: Tradable::Yes { fee: TradeFee::Free },
+        tradable: Tradable::Yes {
+            fee: TradeFee::Free,
+        },
     },
 };
 
@@ -167,13 +254,22 @@ pub static KAEL_SQUIRE_BOOTS: ItemData = ItemData {
         slot: EquipmentSlot::Shoes,
         level_req: 1,
         fixed_stats: KAEL_SQUIRE_BOOTS_STATS,
+        fixed_special_effects: NO_FIXED_SPECIAL_EFFECTS,
         gem_slots: GemSlotConfig::FOUR_BASE_PLUS_ONE_BONUS,
+        identification: Some(EquipmentIdentificationRules {
+            starts_unidentified: true,
+            bias: EquipmentRollBias::Neutral,
+            additional_effect_count: 0,
+            additional_effect_pool: NO_ADDITIONAL_EFFECT_POOL,
+        }),
     }),
     acquisition: ItemAcquisition {
         droppable: true,
         purchasable: None,
         sellable: None,
-        tradable: Tradable::Yes { fee: TradeFee::Free },
+        tradable: Tradable::Yes {
+            fee: TradeFee::Free,
+        },
     },
 };
 

@@ -1,6 +1,6 @@
 pub mod kael;
 
-use crate::models::character_data::CharacterData;
+use crate::models::{character_data::CharacterData, skill_data::SkillData};
 
 pub use kael::KAEL;
 
@@ -12,6 +12,13 @@ pub fn find_character_by_slug(slug: &str) -> Option<&'static CharacterData> {
     all_characters()
         .into_iter()
         .find(|character| character.slug == slug)
+}
+
+pub fn all_skills_for_character(character_slug: &str) -> Vec<&'static SkillData> {
+    match character_slug {
+        "kael" => kael::skills::all_skills(),
+        _ => vec![],
+    }
 }
 
 pub fn is_valid_current_class_slug(character_slug: &str, current_class_slug: &str) -> bool {
