@@ -1,6 +1,7 @@
 pub mod builder;
 pub mod character;
 pub mod client_snapshot;
+pub mod equipment_change;
 pub mod equipped_item_instance;
 pub mod gem_rolls;
 pub mod identification;

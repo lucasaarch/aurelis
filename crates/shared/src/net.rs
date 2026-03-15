@@ -150,6 +150,8 @@ pub enum ClientMessage {
     SelectCharacter { character_id: Uuid },
     UseItem { inventory_type: String, slot: i16 },
     UseSkill { skill_slug: String },
+    EquipItem { inventory_type: String, slot: i16 },
+    UnequipItem { equipment_slot: String },
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -177,6 +179,17 @@ pub enum ServerMessage {
         skill_slug: String,
     },
     SkillUseFailed {
+        reason: String,
+    },
+    ItemEquipped {
+        inventory_type: String,
+        slot: i16,
+        equipment_slot: String,
+    },
+    ItemUnequipped {
+        equipment_slot: String,
+    },
+    EquipmentChangeFailed {
         reason: String,
     },
     RuntimeStateUpdated {

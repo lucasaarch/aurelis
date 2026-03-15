@@ -9,10 +9,11 @@ use uuid::Uuid;
 use shared::models::character_data::CharacterSkillUnlocks;
 use shared::models::skill_data::CharacterSkillUnlockTier;
 use shared::proto::internal_game::{
-    ConsumeInventoryItemRequest, LoadPlayableCharacterRequest, LoadPlayableCharacterResponse,
-    PersistItemInstanceStateRequest, PersistedEquipmentSnapshot, PersistedInventoryItemSnapshot,
-    PersistedInventorySnapshot, PersistedItemInstanceGemSnapshot, PersistedItemInstanceSnapshot,
-    UnlockCharacterSkillTierRequest, internal_game_service_client::InternalGameServiceClient,
+    ConsumeInventoryItemRequest, EquipInventoryItemRequest, LoadPlayableCharacterRequest,
+    LoadPlayableCharacterResponse, PersistItemInstanceStateRequest, PersistedEquipmentSnapshot,
+    PersistedInventoryItemSnapshot, PersistedInventorySnapshot, PersistedItemInstanceGemSnapshot,
+    PersistedItemInstanceSnapshot, UnequipItemRequest, UnlockCharacterSkillTierRequest,
+    internal_game_service_client::InternalGameServiceClient,
 };
 
 #[derive(Debug, Resource)]
@@ -205,6 +206,60 @@ impl InternalApi {
                     inventory_type,
                     slot: i32::from(slot),
                     quantity: i32::from(quantity),
+                }))
+                .await
+                .map_err(|err| err.to_string())?;
+
+            Ok(())
+        })
+    }
+
+    pub fn equip_inventory_item(
+        &self,
+        account_id: Uuid,
+        character_id: Uuid,
+        inventory_type: String,
+        slot: i16,
+    ) -> Result<(), String> {
+        self.runtime.block_on(async {
+            let endpoint =
+                Endpoint::from_shared(self.grpc_addr.clone()).map_err(|err| err.to_string())?;
+            let channel = endpoint.connect().await.map_err(|err| err.to_string())?;
+            let interceptor = InternalServerAuthInterceptor::new(self.bearer_token.clone());
+            let mut client = InternalGameServiceClient::with_interceptor(channel, interceptor);
+
+            client
+                .equip_inventory_item(Request::new(EquipInventoryItemRequest {
+                    account_id: account_id.to_string(),
+                    character_id: character_id.to_string(),
+                    inventory_type,
+                    slot: i32::from(slot),
+                }))
+                .await
+                .map_err(|err| err.to_string())?;
+
+            Ok(())
+        })
+    }
+
+    pub fn unequip_item(
+        &self,
+        account_id: Uuid,
+        character_id: Uuid,
+        equipment_slot: String,
+    ) -> Result<(), String> {
+        self.runtime.block_on(async {
+            let endpoint =
+                Endpoint::from_shared(self.grpc_addr.clone()).map_err(|err| err.to_string())?;
+            let channel = endpoint.connect().await.map_err(|err| err.to_string())?;
+            let interceptor = InternalServerAuthInterceptor::new(self.bearer_token.clone());
+            let mut client = InternalGameServiceClient::with_interceptor(channel, interceptor);
+
+            client
+                .unequip_item(Request::new(UnequipItemRequest {
+                    account_id: account_id.to_string(),
+                    character_id: character_id.to_string(),
+                    equipment_slot,
                 }))
                 .await
                 .map_err(|err| err.to_string())?;

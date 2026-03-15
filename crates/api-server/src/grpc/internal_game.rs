@@ -3,15 +3,16 @@ use uuid::Uuid;
 
 use crate::services::{
     character::CharacterService, character_skill::CharacterSkillService,
-    inventory::InventoryService, item_instance::ItemInstanceService,
+    equipment::EquipmentService, inventory::InventoryService, item_instance::ItemInstanceService,
 };
 use shared::models::skill_data::CharacterSkillUnlockTier;
 
 use shared::proto::internal_game::{
-    ConsumeInventoryItemRequest, ConsumeInventoryItemResponse, LoadPlayableCharacterRequest,
-    LoadPlayableCharacterResponse, PersistItemInstanceStateRequest,
-    PersistItemInstanceStateResponse, PersistedEquipmentSnapshot, PersistedInventoryItemSnapshot,
-    PersistedInventorySnapshot, PersistedItemInstanceGemSnapshot, PersistedItemInstanceSnapshot,
+    ConsumeInventoryItemRequest, ConsumeInventoryItemResponse, EquipInventoryItemRequest,
+    EquipInventoryItemResponse, LoadPlayableCharacterRequest, LoadPlayableCharacterResponse,
+    PersistItemInstanceStateRequest, PersistItemInstanceStateResponse, PersistedEquipmentSnapshot,
+    PersistedInventoryItemSnapshot, PersistedInventorySnapshot, PersistedItemInstanceGemSnapshot,
+    PersistedItemInstanceSnapshot, UnequipItemRequest, UnequipItemResponse,
     UnlockCharacterSkillTierRequest, UnlockCharacterSkillTierResponse,
     internal_game_service_server::InternalGameService,
 };
@@ -19,6 +20,7 @@ use shared::proto::internal_game::{
 pub struct GrpcInternalGameServiceImpl {
     character_service: CharacterService,
     character_skill_service: CharacterSkillService,
+    equipment_service: EquipmentService,
     inventory_service: InventoryService,
     item_instance_service: ItemInstanceService,
 }
@@ -27,12 +29,14 @@ impl GrpcInternalGameServiceImpl {
     pub fn new(
         character_service: CharacterService,
         character_skill_service: CharacterSkillService,
+        equipment_service: EquipmentService,
         inventory_service: InventoryService,
         item_instance_service: ItemInstanceService,
     ) -> Self {
         Self {
             character_service,
             character_skill_service,
+            equipment_service,
             inventory_service,
             item_instance_service,
         }
@@ -195,5 +199,47 @@ impl InternalGameService for GrpcInternalGameServiceImpl {
             .await?;
 
         Ok(Response::new(ConsumeInventoryItemResponse {}))
+    }
+
+    async fn equip_inventory_item(
+        &self,
+        request: Request<EquipInventoryItemRequest>,
+    ) -> Result<Response<EquipInventoryItemResponse>, Status> {
+        let req = request.into_inner();
+        let account_id = Uuid::parse_str(&req.account_id)
+            .map_err(|_| Status::invalid_argument("invalid account_id"))?;
+        let character_id = Uuid::parse_str(&req.character_id)
+            .map_err(|_| Status::invalid_argument("invalid character_id"))?;
+
+        self.character_service
+            .verify_ownership(account_id, character_id)
+            .await?;
+
+        self.equipment_service
+            .equip_inventory_item(character_id, req.inventory_type, req.slot as i16)
+            .await?;
+
+        Ok(Response::new(EquipInventoryItemResponse {}))
+    }
+
+    async fn unequip_item(
+        &self,
+        request: Request<UnequipItemRequest>,
+    ) -> Result<Response<UnequipItemResponse>, Status> {
+        let req = request.into_inner();
+        let account_id = Uuid::parse_str(&req.account_id)
+            .map_err(|_| Status::invalid_argument("invalid account_id"))?;
+        let character_id = Uuid::parse_str(&req.character_id)
+            .map_err(|_| Status::invalid_argument("invalid character_id"))?;
+
+        self.character_service
+            .verify_ownership(account_id, character_id)
+            .await?;
+
+        self.equipment_service
+            .unequip_item(character_id, req.equipment_slot)
+            .await?;
+
+        Ok(Response::new(UnequipItemResponse {}))
     }
 }

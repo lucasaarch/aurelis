@@ -491,4 +491,162 @@ impl PgCharacterRepository {
         })
         .await
     }
+
+    pub async fn find_equipped_slot(
+        &self,
+        player_character_id: Uuid,
+        slot_value: crate::models::equipment_slot::EquipmentSlotModel,
+    ) -> Result<Option<EquipmentModel>, RepositoryError> {
+        self.run_blocking(move |conn| {
+            equipment::table
+                .filter(equipment::character_id.eq(player_character_id))
+                .filter(equipment::slot.eq(slot_value))
+                .first::<EquipmentModel>(conn)
+                .optional()
+                .map_err(Into::into)
+        })
+        .await
+    }
+
+    pub async fn equip_item_instance(
+        &self,
+        player_character_id: Uuid,
+        slot_value: crate::models::equipment_slot::EquipmentSlotModel,
+        item_instance_id_value: Uuid,
+    ) -> Result<(), RepositoryError> {
+        self.run_blocking(move |conn| {
+            conn.transaction::<(), RepositoryError, _>(|conn| {
+                diesel::insert_into(equipment::table)
+                    .values(&EquipmentModel::new(
+                        player_character_id,
+                        slot_value.clone(),
+                        item_instance_id_value,
+                    ))
+                    .on_conflict((equipment::character_id, equipment::slot))
+                    .do_update()
+                    .set((
+                        equipment::item_instance_id.eq(item_instance_id_value),
+                        equipment::equipped_at.eq(diesel::dsl::now),
+                    ))
+                    .execute(conn)?;
+                Ok(())
+            })
+        })
+        .await
+    }
+
+    pub async fn unequip_slot(
+        &self,
+        player_character_id: Uuid,
+        slot_value: crate::models::equipment_slot::EquipmentSlotModel,
+    ) -> Result<(), RepositoryError> {
+        self.run_blocking(move |conn| {
+            diesel::delete(equipment::table)
+                .filter(equipment::character_id.eq(player_character_id))
+                .filter(equipment::slot.eq(slot_value))
+                .execute(conn)
+                .map(|_| ())
+                .map_err(Into::into)
+        })
+        .await
+    }
+
+    pub async fn equip_inventory_item_transaction(
+        &self,
+        player_character_id: Uuid,
+        source_inventory_id: Uuid,
+        source_slot: InventoryItemModel,
+        target_slot_value: crate::models::equipment_slot::EquipmentSlotModel,
+        item_instance_id_value: Uuid,
+        swap_target: Option<(Uuid, i16)>,
+    ) -> Result<(), RepositoryError> {
+        self.run_blocking(move |conn| {
+            conn.transaction::<(), RepositoryError, _>(|conn| {
+                let currently_equipped = equipment::table
+                    .filter(equipment::character_id.eq(player_character_id))
+                    .filter(equipment::slot.eq(target_slot_value.clone()))
+                    .first::<EquipmentModel>(conn)
+                    .optional()?;
+
+                diesel::delete(inventory_items::table)
+                    .filter(inventory_items::inventory_id.eq(source_inventory_id))
+                    .filter(inventory_items::slot_index.eq(source_slot.slot_index))
+                    .execute(conn)?;
+
+                if let Some(equipped) = currently_equipped {
+                    let (dest_inventory_id, dest_slot) = swap_target.ok_or_else(|| {
+                        RepositoryError::Internal(
+                            "Missing swap target for occupied equipment slot".to_string(),
+                        )
+                    })?;
+
+                    let swapped_slot = InventoryItemModel::new(
+                        dest_inventory_id,
+                        Some(equipped.item_instance_id),
+                        None,
+                        dest_slot,
+                        1,
+                    );
+
+                    diesel::insert_into(inventory_items::table)
+                        .values(&swapped_slot)
+                        .execute(conn)?;
+                }
+
+                diesel::insert_into(equipment::table)
+                    .values(&EquipmentModel::new(
+                        player_character_id,
+                        target_slot_value.clone(),
+                        item_instance_id_value,
+                    ))
+                    .on_conflict((equipment::character_id, equipment::slot))
+                    .do_update()
+                    .set((
+                        equipment::item_instance_id.eq(item_instance_id_value),
+                        equipment::equipped_at.eq(diesel::dsl::now),
+                    ))
+                    .execute(conn)?;
+
+                Ok(())
+            })
+        })
+        .await
+    }
+
+    pub async fn unequip_item_transaction(
+        &self,
+        player_character_id: Uuid,
+        equipment_slot_value: crate::models::equipment_slot::EquipmentSlotModel,
+        target_inventory_id: Uuid,
+        target_slot: i16,
+    ) -> Result<(), RepositoryError> {
+        self.run_blocking(move |conn| {
+            conn.transaction::<(), RepositoryError, _>(|conn| {
+                let equipped = equipment::table
+                    .filter(equipment::character_id.eq(player_character_id))
+                    .filter(equipment::slot.eq(equipment_slot_value.clone()))
+                    .first::<EquipmentModel>(conn)?;
+
+                diesel::delete(equipment::table)
+                    .filter(equipment::character_id.eq(player_character_id))
+                    .filter(equipment::slot.eq(equipment_slot_value))
+                    .execute(conn)?;
+
+                let inventory_slot = InventoryItemModel::new(
+                    target_inventory_id,
+                    Some(equipped.item_instance_id),
+                    None,
+                    target_slot,
+                    1,
+                );
+
+                diesel::insert_into(inventory_items::table)
+                    .values(&inventory_slot)
+                    .execute(conn)?;
+
+                Ok(())
+            })
+        })
+        .await
+    }
 }

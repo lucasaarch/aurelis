@@ -9,6 +9,7 @@ use crate::services::account::AccountService;
 use crate::services::auth::AuthService;
 use crate::services::character::CharacterService;
 use crate::services::character_skill::CharacterSkillService;
+use crate::services::equipment::EquipmentService;
 use crate::services::hash::HashService;
 use crate::services::inventory::InventoryService;
 use crate::services::item::ItemService;
@@ -22,6 +23,7 @@ pub struct AppState {
     pub auth_service: AuthService,
     pub character_service: CharacterService,
     pub character_skill_service: CharacterSkillService,
+    pub equipment_service: EquipmentService,
     pub jwt_service: JwtService,
     pub item_service: ItemService,
     pub item_instance_service: ItemInstanceService,
@@ -53,11 +55,17 @@ impl AppState {
             jwt_service.clone(),
         );
         let character_service = CharacterService::new(
-            character_repository,
+            character_repository.clone(),
             account_repository.clone(),
             item_repository.clone(),
         );
         let character_skill_service = CharacterSkillService::new(character_service.clone());
+        let equipment_service = EquipmentService::new(
+            character_repository.clone(),
+            inventory_repository.clone(),
+            item_repository.clone(),
+            item_instance_repository.clone(),
+        );
         let inventory_service = InventoryService::new(inventory_repository.clone());
         let item_service = ItemService::new(
             item_repository,
@@ -74,6 +82,7 @@ impl AppState {
             auth_service,
             character_service,
             character_skill_service,
+            equipment_service,
             jwt_service,
             item_service,
             item_instance_service,

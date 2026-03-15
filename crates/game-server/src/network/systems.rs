@@ -20,6 +20,7 @@ use crate::runtime::client_snapshot::{
     build_character_snapshot_view, build_character_stats_snapshot, build_equipped_views,
     build_inventory_views,
 };
+use crate::runtime::equipment_change::{equip_item, unequip_item};
 use crate::runtime::use_item::{UseItemRequest, use_item};
 use crate::runtime::use_skill::use_skill;
 use crate::server_config::ServerRuntimeConfig;
@@ -186,6 +187,30 @@ pub fn process_client_messages(
                         &mut runtime_characters,
                         client_id,
                         skill_slug,
+                    );
+                }
+                ClientMessage::EquipItem {
+                    inventory_type,
+                    slot,
+                } => {
+                    handle_equip_item(
+                        &mut server,
+                        &sessions,
+                        &mut runtime_characters,
+                        &internal_api,
+                        client_id,
+                        inventory_type,
+                        slot,
+                    );
+                }
+                ClientMessage::UnequipItem { equipment_slot } => {
+                    handle_unequip_item(
+                        &mut server,
+                        &sessions,
+                        &mut runtime_characters,
+                        &internal_api,
+                        client_id,
+                        equipment_slot,
                     );
                 }
             }
@@ -470,6 +495,175 @@ fn handle_use_skill(
     send_server_message(server, client_id, &ServerMessage::SkillUsed { skill_slug });
     send_character_stats(server, client_id, runtime_character);
     send_runtime_state(server, client_id, runtime_character);
+}
+
+fn handle_equip_item(
+    server: &mut RenetServer,
+    sessions: &ClientSessions,
+    runtime_characters: &mut RuntimeCharacters,
+    internal_api: &InternalApi,
+    client_id: u64,
+    inventory_type: String,
+    slot: i16,
+) {
+    let Some(session) = sessions.by_client_id.get(&client_id) else {
+        return;
+    };
+    let (account_id, character_id) = match session.state {
+        SessionState::CharacterSelected {
+            account_id,
+            character_id,
+        } => (account_id, character_id),
+        _ => {
+            send_server_message(
+                server,
+                client_id,
+                &ServerMessage::EquipmentChangeFailed {
+                    reason: "client has no selected character".to_string(),
+                },
+            );
+            return;
+        }
+    };
+
+    let snapshot = match internal_api.load_playable_character(account_id, character_id) {
+        Ok(snapshot) => snapshot,
+        Err(reason) => {
+            send_server_message(
+                server,
+                client_id,
+                &ServerMessage::EquipmentChangeFailed { reason },
+            );
+            return;
+        }
+    };
+    let reloaded = match equip_item(internal_api, &snapshot, &inventory_type, slot) {
+        Ok(snapshot) => snapshot,
+        Err(reason) => {
+            send_server_message(
+                server,
+                client_id,
+                &ServerMessage::EquipmentChangeFailed { reason },
+            );
+            return;
+        }
+    };
+    let runtime_character = match build_runtime_character(&reloaded) {
+        Ok(runtime) => runtime,
+        Err(reason) => {
+            send_server_message(
+                server,
+                client_id,
+                &ServerMessage::EquipmentChangeFailed { reason },
+            );
+            return;
+        }
+    };
+    let equipped_slot = reloaded
+        .equipment
+        .iter()
+        .find_map(|equipment| {
+            snapshot
+                .inventories
+                .iter()
+                .find(|inventory| inventory.inventory_type == inventory_type)
+                .and_then(|inventory| inventory.items.iter().find(|item| item.slot_index == slot))
+                .and_then(|item| item.item_instance_id)
+                .filter(|id| *id == equipment.item_instance_id)
+                .map(|_| equipment.slot.clone())
+        })
+        .unwrap_or_else(|| "unknown".to_string());
+
+    runtime_characters
+        .by_client_id
+        .insert(client_id, runtime_character.clone());
+    send_server_message(
+        server,
+        client_id,
+        &ServerMessage::ItemEquipped {
+            inventory_type,
+            slot,
+            equipment_slot: equipped_slot,
+        },
+    );
+    send_character_inventory(server, client_id, &reloaded, &runtime_character);
+    send_character_stats(server, client_id, &runtime_character);
+    send_runtime_state(server, client_id, &runtime_character);
+}
+
+fn handle_unequip_item(
+    server: &mut RenetServer,
+    sessions: &ClientSessions,
+    runtime_characters: &mut RuntimeCharacters,
+    internal_api: &InternalApi,
+    client_id: u64,
+    equipment_slot: String,
+) {
+    let Some(session) = sessions.by_client_id.get(&client_id) else {
+        return;
+    };
+    let (account_id, character_id) = match session.state {
+        SessionState::CharacterSelected {
+            account_id,
+            character_id,
+        } => (account_id, character_id),
+        _ => {
+            send_server_message(
+                server,
+                client_id,
+                &ServerMessage::EquipmentChangeFailed {
+                    reason: "client has no selected character".to_string(),
+                },
+            );
+            return;
+        }
+    };
+
+    let snapshot = match internal_api.load_playable_character(account_id, character_id) {
+        Ok(snapshot) => snapshot,
+        Err(reason) => {
+            send_server_message(
+                server,
+                client_id,
+                &ServerMessage::EquipmentChangeFailed { reason },
+            );
+            return;
+        }
+    };
+    let reloaded = match unequip_item(internal_api, &snapshot, &equipment_slot) {
+        Ok(snapshot) => snapshot,
+        Err(reason) => {
+            send_server_message(
+                server,
+                client_id,
+                &ServerMessage::EquipmentChangeFailed { reason },
+            );
+            return;
+        }
+    };
+    let runtime_character = match build_runtime_character(&reloaded) {
+        Ok(runtime) => runtime,
+        Err(reason) => {
+            send_server_message(
+                server,
+                client_id,
+                &ServerMessage::EquipmentChangeFailed { reason },
+            );
+            return;
+        }
+    };
+
+    runtime_characters
+        .by_client_id
+        .insert(client_id, runtime_character.clone());
+    send_server_message(
+        server,
+        client_id,
+        &ServerMessage::ItemUnequipped { equipment_slot },
+    );
+    send_character_inventory(server, client_id, &reloaded, &runtime_character);
+    send_character_stats(server, client_id, &runtime_character);
+    send_runtime_state(server, client_id, &runtime_character);
 }
 
 fn send_server_message(server: &mut RenetServer, client_id: u64, message: &ServerMessage) {

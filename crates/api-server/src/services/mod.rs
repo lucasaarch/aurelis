@@ -2,6 +2,7 @@ pub mod account;
 pub mod auth;
 pub mod character;
 pub mod character_skill;
+pub mod equipment;
 pub mod hash;
 pub mod inventory;
 pub mod item;
