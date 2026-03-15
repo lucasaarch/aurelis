@@ -21,6 +21,12 @@ pub fn all_skills_for_character(character_slug: &str) -> Vec<&'static SkillData>
     }
 }
 
+pub fn find_skill_by_slug(character_slug: &str, skill_slug: &str) -> Option<&'static SkillData> {
+    all_skills_for_character(character_slug)
+        .into_iter()
+        .find(|skill| skill.slug == skill_slug)
+}
+
 pub fn is_valid_current_class_slug(character_slug: &str, current_class_slug: &str) -> bool {
     let Some(character) = find_character_by_slug(character_slug) else {
         return false;

@@ -22,6 +22,7 @@ use crate::{
         RuntimeStatBlock,
     },
     runtime::modifier::{ModifierDuration, ModifierSource, RuntimeModifier, StatModifierOp},
+    runtime::skill_effects::build_passive_skill_modifiers,
 };
 
 pub fn build_runtime_character(
@@ -57,7 +58,7 @@ pub fn build_runtime_character(
                 snapshot.current_class_slug
             )
         })?;
-    let available_skill_slugs = all_skills_for_character(&snapshot.base_character_slug)
+    let available_skills = all_skills_for_character(&snapshot.base_character_slug)
         .into_iter()
         .filter(|skill| {
             skill.is_unlocked_for(
@@ -67,12 +68,15 @@ pub fn build_runtime_character(
                 &snapshot.skill_unlocks,
             )
         })
+        .collect::<Vec<_>>();
+    let available_skill_slugs = available_skills
+        .iter()
         .map(|skill| skill.slug.to_string())
         .collect::<Vec<_>>();
 
     let mut equipped = std::collections::HashMap::new();
     let mut equipment_stats = CombatStats::ZERO;
-    let mut persistent_modifiers = Vec::new();
+    let mut persistent_modifiers = build_passive_skill_modifiers(&available_skills);
 
     for equipped_item in &snapshot.equipment {
         let item_instance = snapshot

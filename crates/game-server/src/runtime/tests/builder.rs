@@ -7,6 +7,7 @@ use crate::{
     },
     runtime::builder::build_runtime_character,
     runtime::modifier::{ModifierDuration, ModifierSource, RuntimeModifier, StatModifierOp},
+    runtime::skill_effects::build_timed_skill_modifier,
 };
 use shared::models::{
     character_data::{CharacterSkillUnlocks, CombatAffinity},
@@ -317,6 +318,32 @@ fn applies_reward_modifiers_to_runtime_rewards() {
 }
 
 #[test]
+fn applies_passive_skill_modifiers_from_catalog_automatically() {
+    let mut snapshot = snapshot_base_only();
+    snapshot.current_class_slug = "kael_royal_sentinel".to_string();
+    snapshot.level = 20;
+
+    let runtime = build_runtime_character(&snapshot).expect("runtime build should succeed");
+
+    assert!(
+        runtime
+            .available_skill_slugs
+            .contains(&"sentinel_discipline".to_string())
+    );
+    assert_eq!(runtime.stats.from_persistent_modifiers.core.mp, 100);
+    assert_eq!(
+        runtime
+            .stats
+            .from_persistent_modifiers
+            .secondary
+            .crit_chance,
+        8
+    );
+    assert_eq!(runtime.stats.final_stats.core.mp, 380);
+    assert_eq!(runtime.stats.final_stats.secondary.crit_chance, 8);
+}
+
+#[test]
 fn applies_identified_item_instance_attributes_as_persistent_modifiers() {
     let mut snapshot = snapshot_base_only();
     snapshot.current_class_slug = "kael_royal_sentinel".to_string();
@@ -420,6 +447,22 @@ fn applies_and_expires_timed_modifiers() {
     assert_eq!(runtime.stats.from_timed_modifiers.core.magical_atk, 0);
     assert_eq!(runtime.stats.final_stats.core.physical_atk, 80);
     assert_eq!(runtime.stats.final_stats.core.magical_atk, 12);
+}
+
+#[test]
+fn builds_advantage_skill_buff_from_catalog() {
+    let mut snapshot = snapshot_base_only();
+    snapshot.current_class_slug = "kael_royal_sentinel".to_string();
+    snapshot.level = 20;
+
+    let mut runtime = build_runtime_character(&snapshot).expect("runtime build should succeed");
+    let modifier =
+        build_timed_skill_modifier("kael", "sentinel_steel_pulse").expect("buff should build");
+
+    runtime.add_timed_modifier(modifier);
+
+    assert_eq!(runtime.stats.from_timed_modifiers.core.physical_atk, 12);
+    assert_eq!(runtime.stats.final_stats.core.physical_atk, 92);
 }
 
 fn snapshot_base_only() -> PlayableCharacterSnapshot {

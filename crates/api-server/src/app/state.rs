@@ -8,6 +8,7 @@ use crate::repositories::item_instance::PgItemInstanceRepository;
 use crate::services::account::AccountService;
 use crate::services::auth::AuthService;
 use crate::services::character::CharacterService;
+use crate::services::character_skill::CharacterSkillService;
 use crate::services::hash::HashService;
 use crate::services::inventory::InventoryService;
 use crate::services::item::ItemService;
@@ -20,6 +21,7 @@ pub struct AppState {
     pub account_service: AccountService,
     pub auth_service: AuthService,
     pub character_service: CharacterService,
+    pub character_skill_service: CharacterSkillService,
     pub jwt_service: JwtService,
     pub item_service: ItemService,
     pub item_instance_service: ItemInstanceService,
@@ -55,6 +57,7 @@ impl AppState {
             account_repository.clone(),
             item_repository.clone(),
         );
+        let character_skill_service = CharacterSkillService::new(character_service.clone());
         let inventory_service = InventoryService::new(inventory_repository.clone());
         let item_service = ItemService::new(
             item_repository,
@@ -70,6 +73,7 @@ impl AppState {
             account_service,
             auth_service,
             character_service,
+            character_skill_service,
             jwt_service,
             item_service,
             item_instance_service,

@@ -1,4 +1,5 @@
 use crate::models::character_data::{CharacterData, CharacterSkillUnlocks, CombatAffinity};
+use crate::models::item_data::CatalogStatModifier;
 
 pub struct SkillData {
     pub slug: &'static str,
@@ -12,6 +13,8 @@ pub struct SkillData {
     pub cooldown_secs: f32,
     pub cast_time_secs: f32,
     pub range: f32,
+    pub passive_modifiers: &'static [CatalogStatModifier],
+    pub timed_buff: Option<SkillTimedBuffData>,
 }
 
 pub enum SkillOwner {
@@ -54,6 +57,11 @@ pub enum SkillUnlockRequirement {
 pub enum SkillCost {
     None,
     Mp(i32),
+}
+
+pub struct SkillTimedBuffData {
+    pub duration_ms: u64,
+    pub modifiers: &'static [CatalogStatModifier],
 }
 
 impl SkillData {

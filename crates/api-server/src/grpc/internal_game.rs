@@ -1,27 +1,39 @@
 use tonic::{Request, Response, Status};
 use uuid::Uuid;
 
-use crate::services::{character::CharacterService, item_instance::ItemInstanceService};
+use crate::services::{
+    character::CharacterService, character_skill::CharacterSkillService,
+    inventory::InventoryService, item_instance::ItemInstanceService,
+};
+use shared::models::skill_data::CharacterSkillUnlockTier;
 
 use shared::proto::internal_game::{
-    LoadPlayableCharacterRequest, LoadPlayableCharacterResponse, PersistItemInstanceStateRequest,
+    ConsumeInventoryItemRequest, ConsumeInventoryItemResponse, LoadPlayableCharacterRequest,
+    LoadPlayableCharacterResponse, PersistItemInstanceStateRequest,
     PersistItemInstanceStateResponse, PersistedEquipmentSnapshot, PersistedInventoryItemSnapshot,
     PersistedInventorySnapshot, PersistedItemInstanceGemSnapshot, PersistedItemInstanceSnapshot,
+    UnlockCharacterSkillTierRequest, UnlockCharacterSkillTierResponse,
     internal_game_service_server::InternalGameService,
 };
 
 pub struct GrpcInternalGameServiceImpl {
     character_service: CharacterService,
+    character_skill_service: CharacterSkillService,
+    inventory_service: InventoryService,
     item_instance_service: ItemInstanceService,
 }
 
 impl GrpcInternalGameServiceImpl {
     pub fn new(
         character_service: CharacterService,
+        character_skill_service: CharacterSkillService,
+        inventory_service: InventoryService,
         item_instance_service: ItemInstanceService,
     ) -> Self {
         Self {
             character_service,
+            character_skill_service,
+            inventory_service,
             item_instance_service,
         }
     }
@@ -135,5 +147,53 @@ impl InternalGameService for GrpcInternalGameServiceImpl {
             .await?;
 
         Ok(Response::new(PersistItemInstanceStateResponse {}))
+    }
+
+    async fn unlock_character_skill_tier(
+        &self,
+        request: Request<UnlockCharacterSkillTierRequest>,
+    ) -> Result<Response<UnlockCharacterSkillTierResponse>, Status> {
+        let req = request.into_inner();
+        let account_id = Uuid::parse_str(&req.account_id)
+            .map_err(|_| Status::invalid_argument("invalid account_id"))?;
+        let character_id = Uuid::parse_str(&req.character_id)
+            .map_err(|_| Status::invalid_argument("invalid character_id"))?;
+        let tier = match req.tier.as_str() {
+            "beginner" => CharacterSkillUnlockTier::Beginner,
+            "intermediate" => CharacterSkillUnlockTier::Intermediate,
+            _ => return Err(Status::invalid_argument("invalid tier")),
+        };
+
+        self.character_skill_service
+            .unlock_tier(account_id, character_id, tier)
+            .await?;
+
+        Ok(Response::new(UnlockCharacterSkillTierResponse {}))
+    }
+
+    async fn consume_inventory_item(
+        &self,
+        request: Request<ConsumeInventoryItemRequest>,
+    ) -> Result<Response<ConsumeInventoryItemResponse>, Status> {
+        let req = request.into_inner();
+        let account_id = Uuid::parse_str(&req.account_id)
+            .map_err(|_| Status::invalid_argument("invalid account_id"))?;
+        let character_id = Uuid::parse_str(&req.character_id)
+            .map_err(|_| Status::invalid_argument("invalid character_id"))?;
+
+        self.character_service
+            .verify_ownership(account_id, character_id)
+            .await?;
+
+        self.inventory_service
+            .consume_item_slot(
+                character_id,
+                req.inventory_type,
+                req.slot as i16,
+                req.quantity as i16,
+            )
+            .await?;
+
+        Ok(Response::new(ConsumeInventoryItemResponse {}))
     }
 }

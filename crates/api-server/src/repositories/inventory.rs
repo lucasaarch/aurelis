@@ -149,6 +149,21 @@ impl PgInventoryRepository {
         .await
     }
 
+    pub async fn decrement_quantity(
+        &self,
+        slot_id: Uuid,
+        amount: i16,
+    ) -> Result<(), RepositoryError> {
+        self.run_blocking(move |conn| {
+            diesel::update(inventory_items::table.find(slot_id))
+                .set(inventory_items::quantity.eq(inventory_items::quantity - amount))
+                .execute(conn)
+                .map(|_| ())
+                .map_err(Into::into)
+        })
+        .await
+    }
+
     pub async fn insert_item_slot(
         &self,
         inventory_id: Uuid,

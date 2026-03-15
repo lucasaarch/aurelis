@@ -15,6 +15,7 @@ use crate::repositories::character::{
 };
 use crate::repositories::item::PgItemRepository;
 use shared::models::character_data::CharacterSkillUnlocks;
+use shared::models::skill_data::CharacterSkillUnlockTier;
 
 pub struct CreateCharacterInput {
     pub name: String,
@@ -291,6 +292,51 @@ impl CharacterService {
             item_instance_gems,
             item_by_id,
         ))
+    }
+
+    pub async fn unlock_skill_tier(
+        &self,
+        account_id: Uuid,
+        character_id: Uuid,
+        tier: CharacterSkillUnlockTier,
+    ) -> Result<(), AppError> {
+        let row = self
+            .character_repository
+            .find_playable_character(character_id)
+            .await
+            .map_err(|_| AppError::Unauthorized("Unable to fetch character data".to_string()))?;
+
+        if row.account_id != account_id {
+            return Err(AppError::PermissionDenied(
+                "Character does not belong to this account".to_string(),
+            ));
+        }
+
+        let already_unlocked = match tier {
+            CharacterSkillUnlockTier::Beginner => row.beginner_skill_unlocked,
+            CharacterSkillUnlockTier::Intermediate => row.intermediate_skill_unlocked,
+        };
+        if already_unlocked {
+            return Err(AppError::BadRequest(
+                "Skill tier already unlocked for this character".to_string(),
+            ));
+        }
+
+        let required_level = match tier {
+            CharacterSkillUnlockTier::Beginner => 15,
+            CharacterSkillUnlockTier::Intermediate => 35,
+        };
+        if row.level < required_level {
+            return Err(AppError::BadRequest(format!(
+                "Character level {} is below required level {}",
+                row.level, required_level
+            )));
+        }
+
+        self.character_repository
+            .unlock_skill_tier(character_id, tier)
+            .await
+            .map_err(Into::into)
     }
 }
 

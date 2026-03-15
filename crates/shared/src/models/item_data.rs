@@ -4,6 +4,7 @@ use crate::models::{
     inventory_type::InventoryType,
     item_instance_attributes::{EquipmentRollBias, StatModifierValueKind},
     item_rarity::ItemRarity,
+    skill_data::CharacterSkillUnlockTier,
     stat_modifier::ModifierStat,
 };
 
@@ -169,6 +170,9 @@ pub struct SpecialData {
 
 pub enum SpecialEffect {
     Chest(ChestData),
+    CharacterSkillUnlock {
+        tier: CharacterSkillUnlockTier,
+    },
     Title {
         title: &'static str,
         duration: TitleDuration,

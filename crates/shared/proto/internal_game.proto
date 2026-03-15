@@ -5,6 +5,8 @@ package internal_game;
 service InternalGameService {
   rpc LoadPlayableCharacter(LoadPlayableCharacterRequest) returns (LoadPlayableCharacterResponse);
   rpc PersistItemInstanceState(PersistItemInstanceStateRequest) returns (PersistItemInstanceStateResponse);
+  rpc UnlockCharacterSkillTier(UnlockCharacterSkillTierRequest) returns (UnlockCharacterSkillTierResponse);
+  rpc ConsumeInventoryItem(ConsumeInventoryItemRequest) returns (ConsumeInventoryItemResponse);
 }
 
 message LoadPlayableCharacterRequest {
@@ -78,3 +80,21 @@ message PersistItemInstanceStateRequest {
 }
 
 message PersistItemInstanceStateResponse {}
+
+message UnlockCharacterSkillTierRequest {
+  string account_id = 1;
+  string character_id = 2;
+  string tier = 3;
+}
+
+message UnlockCharacterSkillTierResponse {}
+
+message ConsumeInventoryItemRequest {
+  string account_id = 1;
+  string character_id = 2;
+  string inventory_type = 3;
+  int32 slot = 4;
+  int32 quantity = 5;
+}
+
+message ConsumeInventoryItemResponse {}

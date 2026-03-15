@@ -1,7 +1,10 @@
 use crate::models::{
     character_data::CombatAffinity,
+    item_data::CatalogStatModifier,
     skill_data::{SkillCost, SkillData, SkillKind, SkillOwner, SkillUnlockRequirement},
 };
+
+const NO_SKILL_MODIFIERS: &[CatalogStatModifier] = &[];
 
 pub static KAEL_SLASH: SkillData = SkillData {
     slug: "kael_slash",
@@ -17,6 +20,8 @@ pub static KAEL_SLASH: SkillData = SkillData {
     cooldown_secs: 4.0,
     cast_time_secs: 0.2,
     range: 1.8,
+    passive_modifiers: NO_SKILL_MODIFIERS,
+    timed_buff: None,
 };
 
 pub static KAEL_GUARDING_STRIKE: SkillData = SkillData {
@@ -33,4 +38,6 @@ pub static KAEL_GUARDING_STRIKE: SkillData = SkillData {
     cooldown_secs: 8.0,
     cast_time_secs: 0.4,
     range: 2.2,
+    passive_modifiers: NO_SKILL_MODIFIERS,
+    timed_buff: None,
 };

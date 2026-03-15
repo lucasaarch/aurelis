@@ -13,6 +13,7 @@ pub fn all_skills() -> Vec<&'static SkillData> {
         &KAEL_SLASH,
         &KAEL_GUARDING_STRIKE,
         &SENTINEL_STEEL_PULSE,
+        &SENTINEL_DISCIPLINE,
         &SENTINEL_SIGNATURE_DECREE,
         &SOVEREIGN_BREAKER,
         &ASCENDANT_KINGSFALL,

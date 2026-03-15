@@ -171,4 +171,46 @@ impl InventoryService {
             .await
             .map_err(Into::into)
     }
+
+    pub async fn consume_item_slot(
+        &self,
+        character_id: Uuid,
+        inv_type: String,
+        slot_index: i16,
+        quantity: i16,
+    ) -> Result<(), AppError> {
+        if quantity < 1 {
+            return Err(AppError::BadRequest(
+                "Quantity to consume must be positive".to_string(),
+            ));
+        }
+
+        let inv = self
+            .inventory_repository
+            .find_by_character_and_type(character_id, inv_type)
+            .await?;
+        let slot = self
+            .inventory_repository
+            .find_slot_by_index(inv.id, slot_index)
+            .await?
+            .ok_or_else(|| AppError::NotFound("Inventory slot is empty".to_string()))?;
+
+        if slot.quantity < quantity {
+            return Err(AppError::BadRequest(
+                "Not enough quantity in inventory slot".to_string(),
+            ));
+        }
+
+        if slot.quantity == quantity {
+            self.inventory_repository
+                .delete_slot(inv.id, slot_index)
+                .await?;
+        } else {
+            self.inventory_repository
+                .decrement_quantity(slot.id, quantity)
+                .await?;
+        }
+
+        Ok(())
+    }
 }

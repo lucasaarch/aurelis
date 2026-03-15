@@ -1,10 +1,13 @@
 use crate::models::{
     character_data::CombatAffinity,
+    item_data::CatalogStatModifier,
     skill_data::{
         CharacterSkillUnlockTier, SkillCost, SkillData, SkillKind, SkillOwner,
         SkillUnlockRequirement, SpecialActiveTier,
     },
 };
+
+const NO_SKILL_MODIFIERS: &[CatalogStatModifier] = &[];
 
 pub static SOVEREIGN_BREAKER: SkillData = SkillData {
     slug: "sovereign_breaker",
@@ -20,6 +23,8 @@ pub static SOVEREIGN_BREAKER: SkillData = SkillData {
     cooldown_secs: 16.0,
     cast_time_secs: 0.7,
     range: 2.8,
+    passive_modifiers: NO_SKILL_MODIFIERS,
+    timed_buff: None,
 };
 
 pub static ASCENDANT_KINGSFALL: SkillData = SkillData {
@@ -39,4 +44,6 @@ pub static ASCENDANT_KINGSFALL: SkillData = SkillData {
     cooldown_secs: 42.0,
     cast_time_secs: 1.1,
     range: 5.0,
+    passive_modifiers: NO_SKILL_MODIFIERS,
+    timed_buff: None,
 };

@@ -1,6 +1,7 @@
 use diesel::dsl::{count_star, insert_into};
 use diesel::prelude::*;
 use diesel::upsert::excluded;
+use shared::models::skill_data::CharacterSkillUnlockTier;
 use uuid::Uuid;
 
 use crate::{
@@ -459,6 +460,34 @@ impl PgCharacterRepository {
                 ))
                 .load::<ItemInstanceGemModel>(conn)
                 .map_err(Into::into)
+        })
+        .await
+    }
+
+    pub async fn unlock_skill_tier(
+        &self,
+        player_character_id: Uuid,
+        tier: CharacterSkillUnlockTier,
+    ) -> Result<(), RepositoryError> {
+        self.run_blocking(move |conn| {
+            let changes = match tier {
+                CharacterSkillUnlockTier::Beginner => diesel::update(
+                    player_characters::table.filter(player_characters::id.eq(player_character_id)),
+                )
+                .set(player_characters::beginner_skill_unlocked.eq(true))
+                .execute(conn)?,
+                CharacterSkillUnlockTier::Intermediate => diesel::update(
+                    player_characters::table.filter(player_characters::id.eq(player_character_id)),
+                )
+                .set(player_characters::intermediate_skill_unlocked.eq(true))
+                .execute(conn)?,
+            };
+
+            if changes == 0 {
+                return Err(RepositoryError::NotFound);
+            }
+
+            Ok(())
         })
         .await
     }

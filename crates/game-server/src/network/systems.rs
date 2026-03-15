@@ -16,6 +16,7 @@ use crate::resources::internal_api::InternalApi;
 use crate::resources::runtime_characters::RuntimeCharacters;
 use crate::resources::server_boot_state::ServerBootState;
 use crate::runtime::builder::build_runtime_character;
+use crate::runtime::use_item::{UseItemRequest, use_item};
 use crate::server_config::ServerRuntimeConfig;
 use shared::net::{ClientMessage, ServerMessage};
 
@@ -157,6 +158,20 @@ pub fn process_client_messages(
                         &internal_api,
                         client_id,
                         character_id,
+                    );
+                }
+                ClientMessage::UseItem {
+                    inventory_type,
+                    slot,
+                } => {
+                    handle_use_item(
+                        &mut server,
+                        &sessions,
+                        &mut runtime_characters,
+                        &internal_api,
+                        client_id,
+                        inventory_type,
+                        slot,
                     );
                 }
             }
@@ -305,6 +320,70 @@ fn handle_select_character(
         runtime_character.stats.from_class,
         runtime_character.stats.from_equipment,
         runtime_character.stats.final_stats
+    );
+}
+
+fn handle_use_item(
+    server: &mut RenetServer,
+    sessions: &ClientSessions,
+    runtime_characters: &mut RuntimeCharacters,
+    internal_api: &InternalApi,
+    client_id: u64,
+    inventory_type: String,
+    slot: i16,
+) {
+    let Some(session) = sessions.by_client_id.get(&client_id) else {
+        return;
+    };
+
+    let (account_id, character_id) = match session.state {
+        SessionState::CharacterSelected {
+            account_id,
+            character_id,
+        } => (account_id, character_id),
+        SessionState::Authenticated { .. } | SessionState::ConnectedUnauthenticated => {
+            send_server_message(
+                server,
+                client_id,
+                &ServerMessage::ItemUseFailed {
+                    reason: "client has no selected character".to_string(),
+                },
+            );
+            return;
+        }
+    };
+
+    let snapshot = match internal_api.load_playable_character(account_id, character_id) {
+        Ok(snapshot) => snapshot,
+        Err(reason) => {
+            send_server_message(server, client_id, &ServerMessage::ItemUseFailed { reason });
+            return;
+        }
+    };
+
+    let result = match use_item(UseItemRequest {
+        internal_api,
+        snapshot: &snapshot,
+        inventory_type: &inventory_type,
+        slot,
+    }) {
+        Ok(result) => result,
+        Err(reason) => {
+            send_server_message(server, client_id, &ServerMessage::ItemUseFailed { reason });
+            return;
+        }
+    };
+
+    runtime_characters
+        .by_client_id
+        .insert(client_id, result.runtime_character);
+    send_server_message(
+        server,
+        client_id,
+        &ServerMessage::ItemUsed {
+            inventory_type,
+            slot,
+        },
     );
 }
 

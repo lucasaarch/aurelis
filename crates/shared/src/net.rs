@@ -33,6 +33,7 @@ pub fn protocol_id_from_version(version: &str) -> u64 {
 pub enum ClientMessage {
     Authenticate { token: String },
     SelectCharacter { character_id: Uuid },
+    UseItem { inventory_type: String, slot: i16 },
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -41,4 +42,6 @@ pub enum ServerMessage {
     AuthenticationFailed { reason: String },
     CharacterSelected { character_id: Uuid },
     CharacterSelectionFailed { reason: String },
+    ItemUsed { inventory_type: String, slot: i16 },
+    ItemUseFailed { reason: String },
 }

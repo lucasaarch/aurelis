@@ -5,6 +5,7 @@ use crate::models::{
         SpecialData, SpecialEffect, Tradable,
     },
     item_rarity::ItemRarity,
+    skill_data::CharacterSkillUnlockTier,
 };
 
 pub static INVENTORY_EXPANSION_EQUIPMENT: ItemData = ItemData {
@@ -178,6 +179,46 @@ pub static INVENTORY_EXPANSION_KIT: ItemData = ItemData {
     },
 };
 
+pub static LEARNING_BOOK_BEGINNER: ItemData = ItemData {
+    slug: "learning_book_beginner",
+    name: "Beginner Learning Book",
+    description: "Unlocks the level 15 locked skill for any evolution line of the character.",
+    rarity: ItemRarity::Rare,
+    inventory_type: InventoryType::Special,
+    max_stack: 1,
+    kind: ItemKind::Special(SpecialData {
+        effect: SpecialEffect::CharacterSkillUnlock {
+            tier: CharacterSkillUnlockTier::Beginner,
+        },
+    }),
+    acquisition: ItemAcquisition {
+        droppable: false,
+        purchasable: None,
+        sellable: None,
+        tradable: Tradable::No,
+    },
+};
+
+pub static LEARNING_BOOK_INTERMEDIATE: ItemData = ItemData {
+    slug: "learning_book_intermediate",
+    name: "Intermediate Learning Book",
+    description: "Unlocks the level 35 locked skill for any evolution line of the character.",
+    rarity: ItemRarity::Epic,
+    inventory_type: InventoryType::Special,
+    max_stack: 1,
+    kind: ItemKind::Special(SpecialData {
+        effect: SpecialEffect::CharacterSkillUnlock {
+            tier: CharacterSkillUnlockTier::Intermediate,
+        },
+    }),
+    acquisition: ItemAcquisition {
+        droppable: false,
+        purchasable: None,
+        sellable: None,
+        tradable: Tradable::No,
+    },
+};
+
 pub static ITEMS: &[&ItemData] = &[
     &INVENTORY_EXPANSION_EQUIPMENT,
     &INVENTORY_EXPANSION_ACCESSORY,
@@ -186,4 +227,6 @@ pub static ITEMS: &[&ItemData] = &[
     &INVENTORY_EXPANSION_QUEST_ITEM,
     &INVENTORY_EXPANSION_SPECIAL,
     &INVENTORY_EXPANSION_KIT,
+    &LEARNING_BOOK_BEGINNER,
+    &LEARNING_BOOK_INTERMEDIATE,
 ];
