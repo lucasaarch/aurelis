@@ -1,6 +1,5 @@
 use std::env;
 use std::fmt::Write as _;
-use std::fs;
 use std::net::UdpSocket;
 use std::time::SystemTime;
 
@@ -94,26 +93,12 @@ struct ClientConfig {
 
 impl ClientConfig {
     fn from_env() -> Self {
-        let running_in_wsl = env::var_os("WSL_DISTRO_NAME").is_some()
-            || env::var("WSL_INTEROP").is_ok()
-            || fs::read_to_string("/proc/version")
-                .map(|value| value.to_ascii_lowercase().contains("microsoft"))
-                .unwrap_or(false)
-            || fs::read_to_string("/proc/sys/kernel/osrelease")
-                .map(|value| value.to_ascii_lowercase().contains("microsoft"))
-                .unwrap_or(false);
         let enable_audio = env::var("GAME_CLIENT_ENABLE_AUDIO")
             .ok()
             .as_deref()
             .map(|value| matches!(value, "1" | "true" | "TRUE" | "yes" | "YES"))
-            .unwrap_or(!running_in_wsl);
-        let preferred_backends = if env::var("WGPU_BACKEND").is_ok() {
-            None
-        } else if running_in_wsl {
-            Some(Backends::GL)
-        } else {
-            None
-        };
+            .unwrap_or(true);
+        let preferred_backends = None;
 
         Self {
             server_addr: env::var("GAME_SERVER_ADDR")

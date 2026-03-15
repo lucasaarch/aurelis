@@ -28,11 +28,9 @@ Supported environment variables:
   - optional action automatically sent after the full character snapshot loads
 - `GAME_CLIENT_ENABLE_AUDIO`
   - optional
-  - defaults to `false` under WSL
-  - defaults to `true` elsewhere
+  - defaults to `true`
 - `WGPU_BACKEND`
   - optional
-  - when not set, the client prefers `GL` under WSL to avoid unstable Vulkan `dzn` behavior
   - examples:
     - `WGPU_BACKEND=gl`
     - `WGPU_BACKEND=vulkan`
@@ -65,16 +63,6 @@ Preferred login flow:
 ```sh
 GAME_CLIENT_EMAIL="<email>" \
 GAME_CLIENT_PASSWORD="<password>" \
-cargo run -p game-client
-```
-
-WSL-safe example:
-
-```sh
-WGPU_BACKEND=gl \
-GAME_CLIENT_ENABLE_AUDIO=0 \
-GAME_CLIENT_TOKEN="<jwt>" \
-GAME_CLIENT_CHARACTER_ID="<character-uuid>" \
 cargo run -p game-client
 ```
 
